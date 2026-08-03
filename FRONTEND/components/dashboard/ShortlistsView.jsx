@@ -1,40 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProfileCard from '../ProfileCard';
-
-const initialShortlists = [
-  {
-    id: "BKLH000000001",
-    name: 'Aishwarya R.',
-    age: 26,
-    height: "5'4\"",
-    religion: 'Hindu - Nair',
-    education: 'M.Tech',
-    profession: 'Software Engineer',
-    location: 'Bangalore',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=400&h=500',
-    verified: true,
-    premium: true,
-  },
-  {
-    id: "BKLH000000007",
-    name: 'Kavya Madhavan',
-    age: 25,
-    height: "5'3\"",
-    religion: 'Hindu - Nair',
-    education: 'BFA - Design',
-    profession: 'UI/UX Designer',
-    location: 'Ernakulam',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400&h=500',
-    verified: true,
-    premium: false,
-  },
-];
+import axiosInstance from '../../src/utils/axiosInstance';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function ShortlistsView() {
-  const [shortlists, setShortlists] = useState(initialShortlists);
+  const [shortlists, setShortlists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const removeShortlist = (id) => {
-    setShortlists((prev) => prev.filter((p) => p.id !== id));
+  useEffect(() => {
+    const fetchFavourites = async () => {
+      setLoading(true);
+      try {
+        const res = await axiosInstance.get('/users/favourites');
+        setShortlists(res.data.favourites);
+      } catch (err) {
+        console.error("Failed to load favourites:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (user) {
+      fetchFavourites();
+    }
+  }, [user]);
+
+  const removeShortlist = async (id) => {
+    try {
+      await axiosInstance.delete(`/users/profile/${id}/favourites`);
+      setShortlists((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error("Failed to remove favourite", err);
+    }
   };
 
   return (
@@ -43,15 +40,17 @@ export default function ShortlistsView() {
         <div className="mb-5 border-b border-slate-100 pb-4">
           <h2 className="text-base font-bold text-charcoal-text uppercase tracking-wide flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-deep-maroon"></span>
-            Shortlisted Profiles ({shortlists.length})
+            Favourite Profiles ({shortlists.length})
           </h2>
-          <p className="text-[11px] text-soft-gray mt-1">Quickly view or contact profiles you have saved for later consideration.</p>
+          <p className="text-[11px] text-soft-gray mt-1">Quickly view or contact profiles you have favorited for later consideration.</p>
         </div>
 
-        {shortlists.length === 0 ? (
+        {loading ? (
+           <div className="text-center py-12 text-xs text-soft-gray">Loading favourites...</div>
+        ) : shortlists.length === 0 ? (
           <div className="text-center py-12 text-xs text-soft-gray">
-            <span className="material-symbols-outlined text-[36px] text-slate-300 mb-2">bookmark_border</span>
-            <p>You haven't shortlisted any profiles yet.</p>
+            <span className="material-symbols-outlined text-[36px] text-slate-300 mb-2">favorite_border</span>
+            <p>You haven't favorited any profiles yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 pt-2">
@@ -63,7 +62,7 @@ export default function ShortlistsView() {
                 <button
                   onClick={() => removeShortlist(profile.id)}
                   className="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full hover:bg-black transition-colors shadow cursor-pointer"
-                  title="Remove from shortlists"
+                  title="Remove from favourites"
                 >
                   <span className="material-symbols-outlined text-sm leading-none">close</span>
                 </button>

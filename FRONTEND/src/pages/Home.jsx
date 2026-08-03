@@ -5,133 +5,9 @@ import FAQSection from '../../components/Faq';
 import { Helmet } from 'react-helmet-async';
 import HeroRegistrationForm from '../../components/HeroRegistrationForm';
 import HeroSearch from '../../components/HeroSearch';
-
-
-const highlightedProfiles = [
-  {
-    id: "BKLH000000001",
-    name: "Aishwarya R.",
-    age: 26,
-    height: "5'4\"",
-    religion: "Hindu - Nair",
-    education: "M.Tech",
-    profession: "Software Engineer",
-    location: "Bangalore, KA",
-    image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: true,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000002",
-    name: "Adithya K.",
-    age: 28,
-    height: "5'11\"",
-    religion: "Hindu - Iyer",
-    education: "MBA",
-    profession: "Product Manager",
-    location: "Chennai, TN",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: false,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000003",
-    name: "Meera Joseph",
-    age: 25,
-    height: "5'5\"",
-    religion: "Christian - Syrian Catholic",
-    education: "MD - Pediatrics",
-    profession: "Doctor",
-    location: "Kochi, KL",
-    image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: true,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000004",
-    name: "Sandeep Singh",
-    age: 29,
-    height: "6'0\"",
-    religion: "Sikh - Jat",
-    education: "B.Tech",
-    profession: "Merchant Navy Officer",
-    location: "Pune, MH",
-    image: "https://images.unsplash.com/photo-1624561172888-ac93c696e10c?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: true,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000005",
-    name: "Neha Sharma",
-    age: 27,
-    height: "5'6\"",
-    religion: "Hindu - Brahmin",
-    education: "M.S. Data Science",
-    profession: "Data Scientist",
-    location: "Hyderabad, TS",
-    image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: true,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000006",
-    name: "Arjun Reddy",
-    age: 30,
-    height: "6'1\"",
-    religion: "Hindu - Reddy",
-    education: "B.Tech + MS",
-    profession: "Hardware Engineer",
-    location: "Austin, USA",
-    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: true,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000007",
-    name: "Kavya Madhavan",
-    age: 25,
-    height: "5'3\"",
-    religion: "Hindu - Nair",
-    education: "BFA - Design",
-    profession: "UI/UX Designer",
-    location: "Ernakulam, KL",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: false,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  },
-  {
-    id: "BKLH000000008",
-    name: "Vikram Malhotra",
-    age: 29,
-    height: "5'10\"",
-    religion: "Hindu - Punjabi",
-    education: "Chartered Accountant",
-    profession: "Finance Manager",
-    location: "Delhi, NCR",
-    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=400&h=500",
-    verified: true,
-    premium: true,
-    memberSince: 'Jan 2024',
-    lastUpdated: '2d ago',
-  }
-];
+import axiosInstance from '../../src/utils/axiosInstance';
 
 export default function Home() {
-
   const scrollContainerRef = useRef(null);
   const [storiesVisible, setStoriesVisible] = useState(false);
   const storiesRef = useRef(null);
@@ -143,6 +19,21 @@ export default function Home() {
   const profilesRef = useRef(null);
   const [registerVisible, setRegisterVisible] = useState(false);
   const registerRef = useRef(null);
+  const [highlightedProfiles, setHighlightedProfiles] = useState([]);
+
+  useEffect(() => {
+    const fetchHighlighted = async () => {
+      try {
+        const response = await axiosInstance.get('/users/recommendations');
+        if (response.data && response.data.profiles) {
+          setHighlightedProfiles(response.data.profiles);
+        }
+      } catch (error) {
+        console.error("Error fetching highlighted profiles:", error);
+      }
+    };
+    fetchHighlighted();
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

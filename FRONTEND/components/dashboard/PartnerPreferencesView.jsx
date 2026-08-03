@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../../src/utils/axiosInstance';
 import { useAuth } from '../../src/context/AuthContext';
 
 export default function PartnerPreferencesView({ onProfileUpdate }) {
@@ -26,7 +26,7 @@ export default function PartnerPreferencesView({ onProfileUpdate }) {
     const fetchPreferences = async () => {
       if (user?.profile_id) {
         try {
-          const response = await axios.get(`${import.meta.env.VITE_API_URL}/users/profile/${user.profile_id}/partner-preferences`);
+          const response = await axiosInstance.get(`/users/profile/${user.profile_id}/partner-preferences`);
           const data = response.data.preferences;
           if (data) {
             setPreferences({
@@ -62,7 +62,7 @@ export default function PartnerPreferencesView({ onProfileUpdate }) {
     e.preventDefault();
     if (user?.profile_id) {
       try {
-        await axios.put(`${import.meta.env.VITE_API_URL}/users/profile/${user.profile_id}/partner-preferences`, {
+        await axiosInstance.put(`/users/profile/${user.profile_id}/partner-preferences`, {
           min_age: preferences.ageMin,
           max_age: preferences.ageMax,
           min_height: preferences.heightMin,

@@ -16,8 +16,8 @@ export default function SuperAdminDashboard() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [metrics, setMetrics] = useState({
         totalUsers: 0,
-        totalStaffs: 6,
-        monthlyRevenue: '₹1.84L'
+        totalStaffs: 0,
+        monthlyRevenue: '₹0'
     });
 
     useEffect(() => {

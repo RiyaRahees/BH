@@ -3,64 +3,30 @@ import { Link } from 'react-router-dom';
 import ProfileCard from '../ProfileCard';
 import { useAuth } from '../../src/context/AuthContext';
 
-const recommendedProfiles = [
-  {
-    id: "BKLH000000001",
-    name: 'Aishwarya R.',
-    age: 26,
-    height: "5'4\"",
-    religion: 'Hindu - Nair',
-    education: 'M.Tech',
-    profession: 'Software Engineer',
-    location: 'Bangalore',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=400&h=500',
-    verified: true,
-    premium: true,
-  },
-  {
-    id: "BKLH000000003",
-    name: 'Meera Joseph',
-    age: 25,
-    height: "5'5\"",
-    religion: 'Christian - Catholic',
-    education: 'MD - Pediatrics',
-    profession: 'Doctor',
-    location: 'Kochi',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=400&h=500',
-    verified: true,
-    premium: true,
-  },
-  {
-    id: "BKLH000000007",
-    name: 'Kavya Madhavan',
-    age: 25,
-    height: "5'3\"",
-    religion: 'Hindu - Nair',
-    education: 'BFA - Design',
-    profession: 'UI/UX Designer',
-    location: 'Ernakulam',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400&h=500',
-    verified: true,
-    premium: false,
-  },
-  {
-    id: "BKLH000000005",
-    name: 'Neha Sharma',
-    age: 27,
-    height: "5'6\"",
-    religion: 'Hindu - Brahmin',
-    education: 'M.S. Data Science',
-    profession: 'Data Scientist',
-    location: 'Hyderabad',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400&h=500',
-    verified: true,
-    premium: true,
-  },
-];
-
+import { useState, useEffect } from 'react';
+import axiosInstance from '../../src/utils/axiosInstance';
 export default function MyHomeView() {
   const { user } = useAuth();
   const scrollContainerRef = useRef(null);
+  const [recommendedProfiles, setRecommendedProfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        const response = await axiosInstance.get('/users/recommendations');
+        if (response.data && response.data.profiles) {
+          setRecommendedProfiles(response.data.profiles);
+        }
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, []);
 
   const scroll = (direction) => {
     if (scrollContainerRef.current) {
@@ -124,11 +90,17 @@ export default function MyHomeView() {
             ref={scrollContainerRef}
             className="flex gap-4 overflow-x-auto pb-2 scrollbar-hidden snap-x snap-mandatory scroll-smooth"
           >
-            {recommendedProfiles.map((profile) => (
-              <div className="snap-start" key={profile.id}>
-                <ProfileCard profile={profile} compact />
-              </div>
-            ))}
+            {loading ? (
+              <div className="text-sm text-slate-500 py-4 px-2">Loading recommendations...</div>
+            ) : recommendedProfiles.length > 0 ? (
+              recommendedProfiles.map((profile) => (
+                <div className="snap-start" key={profile.id}>
+                  <ProfileCard profile={profile} compact />
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-slate-500 py-4 px-2">No recommendations available at the moment.</div>
+            )}
           </div>
         </div>
       </section>
@@ -148,9 +120,15 @@ export default function MyHomeView() {
 
         {/* Grid layout going down */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 pt-2">
-          {recommendedProfiles.concat(recommendedProfiles.slice(0, 2)).map((profile, index) => (
-            <ProfileCard key={`${profile.id}-${index}`} profile={profile} fullWidth />
-          ))}
+          {loading ? (
+            <div className="col-span-full text-sm text-slate-500 py-4 px-2">Loading top matches...</div>
+          ) : recommendedProfiles.length > 0 ? (
+            recommendedProfiles.slice(0, 5).map((profile, index) => (
+              <ProfileCard key={`${profile.id}-${index}`} profile={profile} fullWidth />
+            ))
+          ) : (
+            <div className="col-span-full text-sm text-slate-500 py-4 px-2">No top matches available.</div>
+          )}
         </div>
       </section>
 

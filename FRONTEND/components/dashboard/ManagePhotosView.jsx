@@ -2,56 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../src/utils/axiosInstance';
 import { useAuth } from '../../src/context/AuthContext';
 
-const applyWatermark = (file) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        
-        // Draw original image
-        ctx.drawImage(img, 0, 0);
-        
-        // Set up watermark text
-        const text = "Bharath Marriage";
-        
-        // Calculate the visible width of the image when displayed in a 3:4 aspect ratio container with object-cover.
-        // This ensures the watermark takes up exactly the same visual percentage of the container regardless of image aspect ratio or resolution.
-        const visibleWidth = Math.min(img.width, img.height * (3 / 4));
-        const fontSize = Math.floor(visibleWidth / 10);
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = "rgba(255, 255, 255, 0.5)"; // Semi-transparent white
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        
-        // Add shadow for better visibility on both light and dark backgrounds
-        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        
-        // Draw rotated text at the center
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-Math.PI / 6); // -30 degrees
-        ctx.fillText(text, 0, 0);
-        
-        canvas.toBlob((blob) => {
-          const watermarkedFile = new File([blob], file.name, {
-            type: file.type,
-            lastModified: Date.now(),
-          });
-          resolve(watermarkedFile);
-        }, file.type, 0.9);
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-};
 
 export default function ManagePhotosView({ onProfileUpdate }) {
   const { user, updateUser } = useAuth();
@@ -83,10 +33,8 @@ export default function ManagePhotosView({ onProfileUpdate }) {
   const handleFileUpload = async (slotId, file) => {
     if (!file || !profileId) return;
 
-    const watermarkedFile = await applyWatermark(file);
-
     const formData = new FormData();
-    formData.append('photo', watermarkedFile);
+    formData.append('photo', file);
     formData.append('slot', slotId);
 
     try {
@@ -150,9 +98,27 @@ export default function ManagePhotosView({ onProfileUpdate }) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {photos.map((photo) => (
             <div key={photo.id} className="relative rounded-xl border border-dashed border-slate-200 aspect-[3/4] flex flex-col items-center justify-center bg-slate-50/50 overflow-hidden group">
+              <input
+                type="file"
+                accept="image/*"
+                id={`photo-upload-${photo.id}`}
+                className="hidden"
+                onChange={(e) => {
+                  handleFileUpload(photo.id, e.target.files?.[0]);
+                  e.target.value = ''; // Reset value to allow uploading same file again
+                }}
+              />
+
               {photo.url ? (
                 <>
                   <img src={photo.url} alt="Profile photo" className="w-full h-full object-cover" />
+                  
+                  {/* Single Centered Watermark overlay for preview */}
+                  <div className="pointer-events-none select-none absolute inset-0 flex items-center justify-center opacity-40">
+                    <span className="text-white font-bold tracking-wider drop-shadow-md -rotate-[20deg] whitespace-nowrap text-sm">
+                      Bharath Marriage
+                    </span>
+                  </div>
 
                   {photo.isPrimary && (
                     <span className="absolute top-2 left-2 bg-deep-maroon text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow border border-white/20 uppercase tracking-wider">
@@ -161,6 +127,13 @@ export default function ManagePhotosView({ onProfileUpdate }) {
                   )}
 
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => document.getElementById(`photo-upload-${photo.id}`).click()}
+                      className="bg-white hover:bg-slate-100 text-charcoal-text p-1.5 rounded-full shadow hover:scale-105 transition-all cursor-pointer"
+                      title="Update Photo"
+                    >
+                      <span className="material-symbols-outlined text-base leading-none">edit</span>
+                    </button>
                     <button
                       onClick={() => setPhotoToDelete(photo.id)}
                       className="bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-full shadow hover:scale-105 transition-all cursor-pointer"
@@ -175,16 +148,6 @@ export default function ManagePhotosView({ onProfileUpdate }) {
                   <span className="material-symbols-outlined text-[32px] text-slate-300 mb-1">
                     add_a_photo
                   </span>
-
-                  <input
-                    type="file"
-                    accept="image/*"
-                    id={`photo-upload-${photo.id}`}
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(photo.id, e.target.files?.[0])
-                    }
-                  />
 
                   <label
                     htmlFor={`photo-upload-${photo.id}`}

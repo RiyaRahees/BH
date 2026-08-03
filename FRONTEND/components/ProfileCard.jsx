@@ -39,16 +39,15 @@ export default function ProfileCard({ profile, compact = false, fullWidth = fals
           loading="lazy"
         />
 
-        {/* Repeating tiled watermark covering full photo */}
+        {/* Single Centered Watermark */}
         <div
           aria-hidden="true"
-          className="pointer-events-none select-none absolute inset-0 opacity-60"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='75'%3E%3Cdefs%3E%3Cfilter id='shadow'%3E%3CfeDropShadow dx='0.5' dy='0.5' stdDeviation='0.5' flood-opacity='0.45'/%3E%3C/filter%3E%3C/defs%3E%3Ctext x='10' y='45' fill='%23ffffff' filter='url(%23shadow)' font-size='9.5' font-weight='bold' font-family='system-ui, -apple-system, sans-serif' transform='rotate(-20 60 37.5)' letter-spacing='0.08em'%3EBharath Marriage%3C/text%3E%3C/svg%3E")`,
-            backgroundRepeat: 'repeat',
-          }}
-        ></div>
-
+          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center opacity-60"
+        >
+          <span className="text-white font-bold tracking-wider drop-shadow-md -rotate-[20deg] whitespace-nowrap" style={{ fontSize: compact ? '12px' : '16px' }}>
+            Bharath Marriage
+          </span>
+        </div>
 
 
         {guestStar && profile.religion === 'Hindu' && profile.star && (

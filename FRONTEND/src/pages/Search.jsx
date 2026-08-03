@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ProfileCard from '../../components/ProfileCard';
+import axiosInstance from '../../src/utils/axiosInstance';
 
 const searchProfiles = [
   {
@@ -165,6 +166,9 @@ export default function Search() {
   const [location, setLocation] = useState('');
   const [age, setAge] = useState('');
   const [profession, setProfession] = useState('');
+  const [education, setEducation] = useState('');
+  const [nakshatra, setNakshatra] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
 
   const [maritalStatus, setMaritalStatus] = useState('Never Married');
@@ -281,42 +285,45 @@ export default function Search() {
     }
   }, []);
 
-  const performSearch = () => {
+  const performSearch = async () => {
     setSearched(true);
+    setIsLoading(true);
 
-    if (searchId.trim() !== '') {
-      const match = searchProfiles.filter(p => p.id.toLowerCase().includes(searchId.trim().toLowerCase()));
-      setResults(match);
-      return;
+    try {
+      const params = {};
+      if (searchId.trim() !== '') params.profileId = searchId.trim();
+      if (lookingFor) params.gender = lookingFor;
+      if (religion) params.religion = religion;
+      if (location) params.location = location;
+      if (maritalStatus && maritalStatus !== 'Never Married') params.maritalStatus = maritalStatus;
+      if (profession) params.profession = profession;
+      if (education) params.education = education;
+      if (nakshatra && religion === 'Hindu') params.nakshatra = nakshatra;
+      // We aren't filtering caste on the backend due to schema limitations, 
+      // but we send it if we implement it later.
+      if (caste && caste !== 'Open to all') params.community = caste;
+      
+      if (age) {
+        const [min, max] = age.split('-');
+        params.minAge = min;
+        params.maxAge = max;
+      }
+
+      const response = await axiosInstance.get('/users/search', { params });
+      if (response.data && response.data.profiles) {
+        setResults(response.data.profiles);
+      } else {
+        setResults([]);
+      }
+    } catch (error) {
+      console.error('Error performing search:', error);
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
     }
-
-    const filtered = searchProfiles.filter(p => {
-      if (p.gender !== lookingFor) return false;
-      if (religion && p.religion !== religion) return false;
-      if (caste !== 'Open to all' && p.caste !== caste) return false;
-      if (location && p.location !== location) return false;
-      if (maritalStatus) {
-        const pStatus = p.maritalStatus || 'Never Married';
-        if (pStatus !== maritalStatus) return false;
-      }
-      if (profession) {
-        const prof = p.profession.toLowerCase();
-        const param = profession.toLowerCase();
-        if (param === 'engineer') {
-          if (!prof.includes('engineer')) return false;
-        } else if (param === 'govt employee') {
-          if (!prof.includes('govt') && !prof.includes('government') && !prof.includes('officer')) return false;
-        } else {
-          if (!prof.includes(param)) return false;
-        }
-      }
-      return true;
-    });
-
-    setResults(filtered);
-    setTimeout(() => {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 150);
   };
 
   const handleSearch = (e) => {
@@ -502,9 +509,44 @@ export default function Search() {
                     </select>
                   </div>
 
+                  <div className="text-left">
+                    <label className="block text-[9px] md:text-[11px] text-slate-400 font-semibold mb-1 uppercase tracking-wide">
+                      Education
+                    </label>
+                    <select
+                      value={education}
+                      onChange={(e) => setEducation(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg py-2 px-3 text-xs bg-white"
+                    >
+                      <option value="">Any Education</option>
+                      <option value="B.Tech">B.Tech / B.E</option>
+                      <option value="M.Tech">M.Tech / M.E</option>
+                      <option value="B.Sc">B.Sc / M.Sc</option>
+                      <option value="B.Com">B.Com / M.Com</option>
+                      <option value="MBA">MBA / BBA</option>
+                      <option value="MBBS">MBBS / MD</option>
+                      <option value="Nursing">Nursing</option>
+                      <option value="Degree">Any Degree</option>
+                    </select>
+                  </div>
 
-
-                </div>
+                  {religion === 'Hindu' && (
+                    <div className="text-left">
+                      <label className="block text-[9px] md:text-[11px] text-slate-400 font-semibold mb-1 uppercase tracking-wide">
+                        Nakshatra
+                      </label>
+                      <select
+                        value={nakshatra}
+                        onChange={(e) => setNakshatra(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg py-2 px-3 text-xs bg-white"
+                      >
+                        <option value="">Any Nakshatra</option>
+                        {NAKSHATRAS.map((star) => (
+                          <option key={star} value={star}>{star}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}                </div>
               </div>
             )}
 
@@ -523,9 +565,10 @@ export default function Search() {
 
               <button
                 type="submit"
-                className="bg-deep-maroon hover:bg-primary text-white font-semibold py-2 px-8 md:px-14 rounded-lg shadow text-xs uppercase tracking-wider"
+                disabled={isLoading}
+                className="bg-deep-maroon hover:bg-primary disabled:opacity-70 disabled:cursor-not-allowed text-white font-semibold py-2 px-8 md:px-14 rounded-lg shadow text-xs uppercase tracking-wider"
               >
-                Search
+                {isLoading ? 'Searching...' : 'Search'}
               </button>
             </div>
 
@@ -560,7 +603,13 @@ export default function Search() {
                 </p>
               </div>
 
-              {results.length > 0 ? (
+              {isLoading ? (
+                <div className="bg-white p-12 rounded-xl border border-slate-100 text-center">
+                  <span className="material-symbols-outlined text-[48px] text-deep-maroon animate-spin mb-3">progress_activity</span>
+                  <h4 className="font-semibold text-charcoal-text mb-1">Searching Profiles...</h4>
+                  <p className="text-xs text-soft-gray">Please wait while we find the best matches for you.</p>
+                </div>
+              ) : results.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
                   {results.map((profile) => (
                     <ProfileCard key={profile.id} profile={profile} fullWidth guestStar={religion === 'Hindu' ? guestStar : null} />

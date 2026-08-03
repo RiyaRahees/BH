@@ -14,7 +14,7 @@ export const getUserDetailsByProfileId = async (req, res) => {
 
     // 1. Get base user details and identify religion
     const [users] = await pool.query(
-      'SELECT id, profile_id, full_name, country_code, mobile_number, email_address, religion, dob, gender, district, created_at FROM user_registration WHERE profile_id = ?',
+      'SELECT id, profile_id, full_name, country_code, mobile_number, email_address, religion, dob, gender, district, created_at, photo_1, photo_2, photo_3, photo_4 FROM user_registration WHERE profile_id = ?',
       [profileId]
     );
 
@@ -74,6 +74,13 @@ export const getUserDetailsByProfileId = async (req, res) => {
     if (!profile.gender) {
       profile.gender = user.gender;
     }
+    
+    profile.photo_1 = user.photo_1;
+    profile.photo_2 = user.photo_2;
+    profile.photo_3 = user.photo_3;
+    profile.photo_4 = user.photo_4;
+    profile.religion = user.religion;
+    profile.name = profile.name || user.full_name;
 
     res.status(200).json({
       message: 'User details fetched successfully',
@@ -257,5 +264,182 @@ export const updateUserDetailsByProfileId = async (req, res) => {
   } catch (error) {
     console.error('Error updating user profile:', error);
     res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const isValidUpload = (url) => {
+  if (!url) return false;
+  return url.includes('/uploads/');
+};
+
+export const getRecommendedProfiles = async (req, res) => {
+  try {
+    let query = 'SELECT profile_id as id, full_name as name, religion, dob, gender, district as location, photo_1 FROM user_registration';
+    let queryParams = [];
+
+    if (req.user && req.user.id) {
+      query += ' WHERE id != ?';
+      queryParams.push(req.user.id);
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT 10';
+
+    const [users] = await pool.query(query, queryParams);
+    
+    const formattedProfiles = users.map(user => {
+      let age = null;
+      if (user.dob) {
+        const d = new Date(user.dob);
+        if (!isNaN(d.getTime())) {
+          const today = new Date();
+          age = today.getFullYear() - d.getFullYear();
+          const m = today.getMonth() - d.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+            age--;
+          }
+        }
+      }
+      return {
+        id: user.id,
+        name: user.name,
+        age: age || 25,
+        height: "5'5\"",
+        religion: user.religion || 'Hindu',
+        education: 'Degree',
+        profession: 'Professional',
+        location: user.location || 'Kerala',
+        image: isValidUpload(user.photo_1) ? user.photo_1 : (user.gender === 'Female' ? 'https://www.w3schools.com/howto/img_avatar2.png' : 'https://www.w3schools.com/howto/img_avatar.png'),
+        verified: true,
+        premium: false,
+        star: user.star || 'Rohini',
+        maritalStatus: 'Never Married',
+      };
+    });
+    
+    res.status(200).json({ profiles: formattedProfiles });
+  } catch (error) {
+    console.error('Error fetching recommendations:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+export const searchProfiles = async (req, res) => {
+  try {
+    const { 
+      gender, minAge, maxAge, religion, location, 
+      education, profession, maritalStatus, nakshatra, profileId 
+    } = req.query;
+
+    let baseQuery = `
+      SELECT u.profile_id as id, u.full_name as name, u.religion, u.dob, u.gender, u.district as location, u.photo_1,
+        COALESCE(h.age, m.age, c.age, o.age) as profile_age,
+        COALESCE(h.height, m.height, c.height, o.height) as height,
+        COALESCE(h.education, m.education, c.education, o.education) as education,
+        COALESCE(h.profession, m.profession, c.profession, o.profession) as profession,
+        COALESCE(h.marital_status, m.marital_status, c.marital_status, o.marital_status) as maritalStatus,
+        h.nakshatra as star
+      FROM user_registration u
+      LEFT JOIN hindus h ON u.profile_id = h.profile_id
+      LEFT JOIN muslims m ON u.profile_id = m.profile_id
+      LEFT JOIN christians c ON u.profile_id = c.profile_id
+      LEFT JOIN others o ON u.profile_id = o.profile_id
+      WHERE 1=1
+    `;
+    const queryParams = [];
+
+    if (req.user && req.user.id) {
+      baseQuery += ' AND u.id != ?';
+      queryParams.push(req.user.id);
+    }
+
+    if (profileId) {
+      baseQuery += ' AND u.profile_id = ?';
+      queryParams.push(profileId);
+    }
+    
+    if (gender) {
+      baseQuery += ' AND u.gender = ?';
+      queryParams.push(gender);
+    }
+    
+    if (religion) {
+      baseQuery += ' AND u.religion = ?';
+      queryParams.push(religion);
+    }
+
+    if (location) {
+      baseQuery += ' AND u.district = ?';
+      queryParams.push(location);
+    }
+
+    if (minAge) {
+      baseQuery += ' AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) >= ?';
+      queryParams.push(parseInt(minAge));
+    }
+    if (maxAge) {
+      baseQuery += ' AND TIMESTAMPDIFF(YEAR, u.dob, CURDATE()) <= ?';
+      queryParams.push(parseInt(maxAge));
+    }
+
+    let havingClause = [];
+    if (education) {
+      havingClause.push('education LIKE ?');
+      queryParams.push(`%${education}%`);
+    }
+    if (profession) {
+      havingClause.push('profession LIKE ?');
+      queryParams.push(`%${profession}%`);
+    }
+    if (maritalStatus && maritalStatus !== 'Any' && maritalStatus !== 'Open to all') {
+      havingClause.push('maritalStatus = ?');
+      queryParams.push(maritalStatus);
+    }
+    if (nakshatra && religion === 'Hindu') {
+      havingClause.push('star = ?');
+      queryParams.push(nakshatra);
+    }
+    
+    if (havingClause.length > 0) {
+      baseQuery += ' HAVING ' + havingClause.join(' AND ');
+    }
+
+    baseQuery += ' ORDER BY u.created_at DESC LIMIT 50';
+
+    const [users] = await pool.query(baseQuery, queryParams);
+    
+    const formattedProfiles = users.map(user => {
+      let age = user.profile_age;
+      if (!age && user.dob) {
+        const d = new Date(user.dob);
+        if (!isNaN(d.getTime())) {
+          const today = new Date();
+          age = today.getFullYear() - d.getFullYear();
+          const m = today.getMonth() - d.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+            age--;
+          }
+        }
+      }
+      return {
+        id: user.id,
+        name: user.name,
+        age: age || 25,
+        height: user.height || "5'5\"",
+        religion: user.religion || 'Hindu',
+        education: user.education || 'Degree',
+        profession: user.profession || 'Professional',
+        location: user.location || 'Kerala',
+        image: isValidUpload(user.photo_1) ? user.photo_1 : (user.gender === 'Female' ? 'https://www.w3schools.com/howto/img_avatar2.png' : 'https://www.w3schools.com/howto/img_avatar.png'),
+        verified: true,
+        premium: false,
+        star: user.star,
+        maritalStatus: user.maritalStatus,
+      };
+    });
+    
+    res.status(200).json({ profiles: formattedProfiles });
+  } catch (error) {
+    console.error('Error in searchProfiles:', error);
+    res.status(500).json({ error: 'Server error during search' });
   }
 };

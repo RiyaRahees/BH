@@ -1,30 +1,33 @@
-import axios from 'axios';
+import axios from "axios";
+
+const API_URL =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000/api"
+    : "https://kerala.bharathmarriage.com/api";
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
   withCredentials: true,
 });
 
 // Request interceptor: Attach access token to headers
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor: Handle 401 Unauthorized (e.g. forced logout)
+// Response interceptor
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
+  failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
@@ -35,78 +38,79 @@ const processQueue = (error, token = null) => {
 };
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    // Avoid infinite loop if refresh token API itself returns 401
-    if (originalRequest.url === '/auth/refresh-token') {
+    if (
+      originalRequest.url?.endsWith("/auth/refresh-token") ||
+      originalRequest.url?.endsWith("/auth/login") ||
+      originalRequest.url?.endsWith("/auth/register")
+    ) {
       return Promise.reject(error);
     }
 
-    if (error.response && error.response.status === 403 && error.response.data?.error?.toLowerCase().includes('banned')) {
-      // Clear local storage and redirect to banned page
-      localStorage.removeItem('user');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('isLoggedIn');
-      
-      if (window.location.pathname !== '/banned') {
-        window.location.href = '/banned';
+    if (
+      error.response?.status === 403 &&
+      error.response.data?.error?.toLowerCase().includes("banned")
+    ) {
+      localStorage.clear();
+
+      if (window.location.pathname !== "/banned") {
+        window.location.href = "/banned";
       }
+
       return Promise.reject(error);
     }
 
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(token => {
-          originalRequest.headers['Authorization'] = 'Bearer ' + token;
-          return axiosInstance(originalRequest);
-        }).catch(err => {
-          return Promise.reject(err);
-        });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axiosInstance(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
       }
 
       isRefreshing = true;
 
       try {
         const refreshResponse = await axios.post(
-          `${axiosInstance.defaults.baseURL}/auth/refresh-token`,
+          `${API_URL}/auth/refresh-token`,
           {},
           { withCredentials: true }
         );
-        
-        const { accessToken } = refreshResponse.data;
-        localStorage.setItem('accessToken', accessToken);
 
-        axiosInstance.defaults.headers.common['Authorization'] = 'Bearer ' + accessToken;
-        originalRequest.headers['Authorization'] = 'Bearer ' + accessToken;
+        const { accessToken } = refreshResponse.data;
+
+        localStorage.setItem("accessToken", accessToken);
+
+        axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);
         isRefreshing = false;
 
         return axiosInstance(originalRequest);
       } catch (err) {
-        processQueue(err, null);
+        processQueue(err);
         isRefreshing = false;
 
-        // Clear local storage and instantly kick them out
-        localStorage.removeItem('user');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('isLoggedIn');
-        
-        // We don't want to infinite loop, so only redirect if not already on login
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
+        localStorage.clear();
+
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
         }
+
         return Promise.reject(err);
       }
     }
+
     return Promise.reject(error);
   }
 );

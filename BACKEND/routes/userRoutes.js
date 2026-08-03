@@ -3,7 +3,9 @@ import multer from 'multer';
 import path from 'path';
 import { 
   getUserDetailsByProfileId, 
-  updateUserDetailsByProfileId 
+  updateUserDetailsByProfileId,
+  getRecommendedProfiles,
+  searchProfiles
 } from '../controllers/user/userDetailsController.js';
 import { 
   getPlanetaryPositions, 
@@ -14,6 +16,12 @@ import {
   uploadUserPhoto, 
   deleteUserPhoto 
 } from '../controllers/user/userPhotosController.js';
+import { 
+  addFavourite, 
+  removeFavourite, 
+  checkFavouriteStatus, 
+  getFavourites 
+} from '../controllers/user/favouriteController.js';
 import { 
   getPartnerPreferences, 
   updatePartnerPreferences 
@@ -44,6 +52,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+// GET /api/users/recommendations
+router.get('/recommendations', getRecommendedProfiles);
+
+// GET /api/users/search
+router.get('/search', searchProfiles);
+
 // GET /api/users/profile/:profileId
 router.get('/profile/:profileId', getUserDetailsByProfileId);
 
@@ -64,6 +78,18 @@ router.post('/profile/:profileId/photos', upload.single('photo'), uploadUserPhot
 
 // DELETE /api/users/profile/:profileId/photos/:slot
 router.delete('/profile/:profileId/photos/:slot', deleteUserPhoto);
+
+// GET /api/users/favourites
+router.get('/favourites', getFavourites);
+
+// POST /api/users/profile/:profileId/favourites
+router.post('/profile/:profileId/favourites', addFavourite);
+
+// DELETE /api/users/profile/:profileId/favourites
+router.delete('/profile/:profileId/favourites', removeFavourite);
+
+// GET /api/users/profile/:profileId/favourites/status
+router.get('/profile/:profileId/favourites/status', checkFavouriteStatus);
 
 // GET /api/users/profile/:profileId/partner-preferences
 router.get('/profile/:profileId/partner-preferences', getPartnerPreferences);

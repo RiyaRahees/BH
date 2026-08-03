@@ -1,150 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import HoroscopeCharts from '../../../components/HoroscopeCharts';
 import { downloadHoroscope } from '../../utils/downloadHoroscope';
-
-
-const profiles = [
-  {
-    id: 'BKLH000000001',
-    name: 'Aishwarya R.',
-    gender: 'Female',
-    age: 26,
-    height: '5ft 4in - 162 Cms',
-    religion: 'Hindu - Nair',
-    education: 'M.Tech',
-    profession: 'Software Engineer',
-    employedIn: 'India',
-    location: 'Bangalore',
-    state: 'Karnataka, India',
-    income: 'Rs. 16 - 20 LPA',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000002',
-    name: 'Adithya K.',
-    gender: 'Male',
-    age: 28,
-    height: '5ft 11in - 180 Cms',
-    religion: 'Hindu - Iyer',
-    education: 'MBA',
-    profession: 'Product Manager',
-    employedIn: 'India',
-    location: 'Chennai',
-    state: 'Tamil Nadu, India',
-    income: 'Rs. 20 - 28 LPA',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000003',
-    name: 'Meera Joseph',
-    gender: 'Female',
-    age: 25,
-    height: '5ft 5in - 165 Cms',
-    religion: 'Christian - Syrian Catholic',
-    education: 'MD - Pediatrics',
-    profession: 'Doctor',
-    employedIn: 'India',
-    location: 'Kochi',
-    state: 'Kerala, India',
-    income: 'Rs. 18 - 24 LPA',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000004',
-    name: 'Sandeep Singh',
-    gender: 'Male',
-    age: 29,
-    height: '6ft - 182 Cms',
-    religion: 'Sikh - Jat',
-    education: 'B.Tech',
-    profession: 'Merchant Navy Officer',
-    employedIn: 'India',
-    location: 'Delhi',
-    state: 'NCR, India',
-    income: 'Rs. 24 - 32 LPA',
-    image: 'https://images.unsplash.com/photo-1624561172888-ac93c696e10c?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000005',
-    name: 'Neha Sharma',
-    gender: 'Female',
-    age: 27,
-    height: '5ft 6in - 167 Cms',
-    religion: 'Hindu - Brahmin',
-    education: 'M.S. Data Science',
-    profession: 'Data Scientist',
-    employedIn: 'India',
-    location: 'Hyderabad',
-    state: 'Telangana, India',
-    income: 'Rs. 18 - 24 LPA',
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000006',
-    name: 'Arjun Reddy',
-    gender: 'Male',
-    age: 30,
-    height: '6ft 1in - 185 Cms',
-    religion: 'Hindu - Reddy',
-    education: 'B.Tech + MS',
-    profession: 'Hardware Engineer',
-    employedIn: 'USA',
-    location: 'Austin',
-    state: 'Texas, USA',
-    income: 'USD 140k - 180k',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000007',
-    name: 'Kavya Madhavan',
-    gender: 'Female',
-    age: 25,
-    height: '5ft 3in - 160 Cms',
-    religion: 'Hindu - Nair',
-    education: 'BFA - Design',
-    profession: 'UI/UX Designer',
-    employedIn: 'India',
-    location: 'Ernakulam',
-    state: 'Kerala, India',
-    income: 'Rs. 10 - 14 LPA',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-  {
-    id: 'BKLH000000008',
-    name: 'Vikram Malhotra',
-    gender: 'Male',
-    age: 29,
-    height: '5ft 10in - 178 Cms',
-    religion: 'Hindu - Punjabi',
-    education: 'Chartered Accountant',
-    profession: 'Finance Manager',
-    employedIn: 'India',
-    location: 'Delhi',
-    state: 'NCR, India',
-    income: 'Rs. 22 - 30 LPA',
-    image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=640&h=760',
-  },
-];
-
-const similarMatches = [
-  {
-    id: 'BKLH000000001',
-    name: 'Aishwarya R.',
-    age: 26,
-    role: 'Software Engineer',
-    location: 'Bangalore',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&q=80&w=300&h=360',
-  },
-  {
-    id: 'BKLH000000003',
-    name: 'Meera Joseph',
-    age: 25,
-    role: 'Doctor',
-    location: 'Kochi',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=300&h=360',
-  },
-];
+import axiosInstance from '../../utils/axiosInstance';
 
 function DetailSection({ title, rows }) {
   return (
@@ -158,7 +16,7 @@ function DetailSection({ title, rows }) {
         {rows.map(([label, value]) => (
           <div key={label} className="flex justify-between items-start py-1.5 border-b border-slate-100/60 last:border-b-0 gap-4">
             <span className="text-[10px] font-bold text-soft-gray uppercase tracking-wider mt-0.5 shrink-0">{label}</span>
-            <span className="text-xs font-semibold text-charcoal-text text-right">{value}</span>
+            <span className="text-xs font-semibold text-charcoal-text text-right">{value || 'Not Specified'}</span>
           </div>
         ))}
       </div>
@@ -170,26 +28,88 @@ export default function ProfileDetails() {
   const { profileId } = useParams();
   const navigate = useNavigate();
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-  let profile = profiles.find(p => p.id === profileId);
-  if (!profile) {
-    profile = profiles[0];
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const [isFavourite, setIsFavourite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get(`/users/profile/${profileId}`);
+        setProfile(response.data.user);
+        
+        if (isLoggedIn) {
+          try {
+            const favRes = await axiosInstance.get(`/users/profile/${profileId}/favourites/status`);
+            setIsFavourite(favRes.data.isFavourite);
+          } catch (e) {
+            console.error("Failed to fetch favourite status", e);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [profileId, isLoggedIn]);
+
+  const handleToggleFavourite = async () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    setFavLoading(true);
+    try {
+      if (isFavourite) {
+        await axiosInstance.delete(`/users/profile/${profileId}/favourites`);
+        setIsFavourite(false);
+      } else {
+        await axiosInstance.post(`/users/profile/${profileId}/favourites`);
+        setIsFavourite(true);
+      }
+    } catch (err) {
+      console.error("Failed to toggle favourite", err);
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#fbfaf9] via-rose-50/10 to-amber-50/5 pt-32 pb-16 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-deep-maroon"></div>
+      </div>
+    );
   }
-  const firstName = profile.name.split(' ')[0];
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#fbfaf9] via-rose-50/10 to-amber-50/5 pt-32 pb-16 flex items-center justify-center">
+        <div className="text-red-600 font-bold text-xl">Profile Not Found</div>
+      </div>
+    );
+  }
+
+  const firstName = profile.name ? profile.name.split(' ')[0] : 'Member';
   const subject = profile.gender === 'Female' ? 'She' : 'He';
   const isHindu = profile.religion?.toLowerCase().includes('hindu');
 
-
   const quickFacts = [
-    { icon: 'cake', label: `${profile.age} yrs` },
-    { icon: 'diversity_3', label: profile.religion.split(' - ')[0] },
-    { icon: 'straighten', label: profile.height.split(' - ')[0] },
-    { icon: 'school', label: profile.education },
+    { icon: 'cake', label: `${profile.age || 'N/A'} yrs` },
+    { icon: 'diversity_3', label: profile.religion ? profile.religion.split(' - ')[0] : 'Hindu' },
+    { icon: 'straighten', label: profile.height ? profile.height.split(' - ')[0] : 'Not specified' },
+    { icon: 'school', label: profile.education || 'Degree' },
   ];
 
   const basicDetails = [
     ['Name', profile.name],
     ['Gender', profile.gender],
-    ['Age', String(profile.age)],
+    ['Age', profile.age ? String(profile.age) : 'N/A'],
     ['Marital Status', profile.maritalStatus || 'Unmarried'],
     ['Height', profile.height],
     ['Profile Created For', profile.profileCreatedFor || 'Myself'],
@@ -198,68 +118,57 @@ export default function ProfileDetails() {
   const professionalDetails = [
     ['Education', profile.education],
     ['Occupation', profile.profession],
-    ['Employed In', profile.employedIn || 'India'],
+    ['Employed In', profile.employedIn || profile.employment_country || 'India'],
   ];
 
   const locationDetails = [
     ['Country', profile.country || 'India'],
-    ['State', profile.state],
-    ['District', profile.district ? profile.district.replace(/^\d{2}-\s*/, '') : 'Thrissur'],
-    ['City', profile.location],
+    ['State', profile.state || 'Kerala'],
+    ['District', profile.district ? profile.district.replace(/^\d{2}-\s*/, '') : 'Not specified'],
+    ['City', profile.location || profile.place],
   ];
 
   const horoscopeDetails = [
-    ['Birth Time', profile.birthTime || '10:00 AM'],
-    ['Janma Sista Dasa', profile.janmaSistaDasa || 'Rahu'],
-    ['End Dasa', profile.endDasa || '2030-01-01'],
+    ['Birth Time', profile.birth_time || 'Not specified'],
+    ['Janma Sista Dasa', profile.janmaSistaDasa || 'Not specified'],
+    ['End Dasa', profile.endDasa || 'Not specified'],
     ['Dob (Malayalam)', (() => {
       const val = profile.date_of_birth_malayalam || profile.dobMalayalam;
-      if (!val) return '1190 Chingam 1';
+      if (!val) return 'Not specified';
       const parts = val.split(' ');
       if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
       return val.replace(/ /g, '/');
     })()],
     ['Dob (English)', (() => {
-      const val = profile.dobEnglish || '1996-08-17';
+      const val = profile.date_of_birth || profile.dobEnglish;
       if (!val) return '';
       if (val.includes('/')) return val; // Already DD/MM/YYYY
       const parts = val.split('-');
       if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
       return val;
     })()],
-    ['Star / Rasi', profile.starRasi || 'Chathayam'],
+    ['Star / Rasi', profile.horoscope_information || profile.nakshatra || profile.starRasi || 'Not specified'],
   ];
 
   const familyDetails = [
-    ['Father\'s Name', profile.fathersName || 'Murali'],
-    ['Father\'s Age', profile.fathersAge || `${(profile.age || 28) + 30} Years`],
-    ['Father\'s Job', profile.fathersJob || 'Accountant'],
-    ['Mother\'s Name', profile.mothersName || 'Rekha'],
-    ['Mother\'s Age', profile.mothersAge || `${(profile.age || 28) + 26} Years`],
-    ['Mother\'s Job', profile.mothersJob || 'Housewife'],
-    ['Sibling Details', profile.siblingDetails || 'One brother working as accountant'],
+    ['Father\'s Name', profile.fathersName || 'Not specified'],
+    ['Father\'s Age', profile.fathersAge || 'Not specified'],
+    ['Father\'s Job', profile.fathersJob || 'Not specified'],
+    ['Mother\'s Name', profile.mothersName || 'Not specified'],
+    ['Mother\'s Age', profile.mothersAge || 'Not specified'],
+    ['Mother\'s Job', profile.mothersJob || 'Not specified'],
+    ['Sibling Details', profile.siblingDetails || 'Not specified'],
   ];
 
-  // Gallery Photos logic based on gender
-  const additionalFemalePhotos = [
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=640&h=760',
-    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=640&h=760',
-    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=640&h=760',
-  ];
+  const isValidPhoto = (url) => url && url.includes('/uploads/');
+  const defaultAvatar = profile.gender === 'Female' ? 'https://www.w3schools.com/howto/img_avatar2.png' : 'https://www.w3schools.com/howto/img_avatar.png';
 
-  const additionalMalePhotos = [
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=640&h=760',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=640&h=760',
-    'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&q=80&w=640&h=760',
-  ];
+  const userPhotos = [profile.photo_1, profile.photo_2, profile.photo_3, profile.photo_4].filter(isValidPhoto);
+  if (userPhotos.length === 0) {
+    userPhotos.push(defaultAvatar);
+  }
 
-  const galleryPhotos = [
-    profile.image,
-    ...(profile.gender === 'Female' ? additionalFemalePhotos : additionalMalePhotos),
-    'placeholder_avatar'
-  ];
-
-  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+  const galleryPhotos = [...userPhotos, 'placeholder_avatar'];
 
   const handlePrevPhoto = () => {
     setActivePhotoIdx((prev) => (prev === 0 ? galleryPhotos.length - 1 : prev - 1));
@@ -457,17 +366,16 @@ export default function ProfileDetails() {
           <div className="bg-transparent md:bg-white md:rounded-2xl md:border md:border-slate-200/60 md:shadow-[0_4px_20px_rgba(0,0,0,0.02)] p-0 md:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
             <div className="grid grid-cols-2 w-full sm:w-auto gap-2 sm:gap-4">
               <button
-                onClick={() => {
-                  if (!isLoggedIn) {
-                    navigate('/login');
-                  } else {
-                    alert('Added to Favourites');
-                  }
-                }}
-                className="flex items-center justify-center gap-1.5 py-2 px-2.5 sm:py-2.5 sm:px-4 rounded-lg sm:rounded-xl border border-pink-100 bg-pink-50/30 text-pink-700 hover:bg-pink-50 hover:shadow-sm transition-all duration-200 cursor-pointer active:scale-95 text-[10px] sm:text-xs font-bold"
+                onClick={handleToggleFavourite}
+                disabled={favLoading}
+                className={`flex items-center justify-center gap-1.5 py-2 px-2.5 sm:py-2.5 sm:px-4 rounded-lg sm:rounded-xl border transition-all duration-200 cursor-pointer active:scale-95 text-[10px] sm:text-xs font-bold ${
+                  isFavourite 
+                    ? 'border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100' 
+                    : 'border-slate-200 bg-slate-50 text-soft-gray hover:bg-slate-100'
+                } ${favLoading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm'}`}
               >
-                <span className="material-symbols-outlined text-[16px] sm:text-[20px] fill-current">favorite</span>
-                <span>Favourite</span>
+                <span className={`material-symbols-outlined text-[16px] sm:text-[20px] ${isFavourite ? 'fill-current text-pink-600' : ''}`}>favorite</span>
+                <span>{isFavourite ? 'Favourited' : 'Favourite'}</span>
               </button>
               <Link
                 to={isLoggedIn ? "/dashboard?tab=inbox" : "/login"}
@@ -584,35 +492,6 @@ export default function ProfileDetails() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Similar Matches Card Grid */}
-          <div className="bg-transparent md:bg-white md:rounded-2xl md:border md:border-slate-200/60 md:shadow-[0_4px_20px_rgba(0,0,0,0.02)] p-0 md:p-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="font-display-lg text-base md:text-lg text-deep-maroon font-bold">Similar Matches</h2>
-              <Link to="/search" className="text-xs font-bold text-heritage-gold hover:text-deep-maroon transition-colors">View all</Link>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              {similarMatches.map((match) => (
-                <Link key={match.id} to={`/profile/${match.id}`} className="flex gap-3 sm:gap-4 rounded-xl border border-slate-200/60 bg-white p-3 hover:bg-slate-50/50 hover:border-heritage-gold/20 hover:shadow-sm transition-all duration-300">
-                  <img src={match.image} alt={match.name} className="h-20 w-16 sm:h-24 sm:w-20 rounded-lg object-cover border border-slate-100 shrink-0" />
-                  <div className="min-w-0 flex-1 flex flex-col justify-between">
-                    <div>
-                      <h3 className="truncate text-xs md:text-sm font-bold text-charcoal-text">{match.name}, {match.age}</h3>
-                      <p className="mt-0.5 truncate text-[11px] font-semibold text-deep-maroon">{match.role}</p>
-                      <p className="mt-1 flex items-center gap-1 text-[11px] text-soft-gray font-medium">
-                        <span className="material-symbols-outlined text-[13px] text-heritage-gold">location_on</span>
-                        {match.location}
-                      </p>
-                    </div>
-                    <span className="inline-flex self-start rounded-lg bg-deep-maroon/[0.04] border border-deep-maroon/10 px-2.5 py-1 text-[10px] font-bold text-deep-maroon hover:bg-deep-maroon hover:text-white transition-all duration-200">
-                      View Profile
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
           </div>
 
         </section>
