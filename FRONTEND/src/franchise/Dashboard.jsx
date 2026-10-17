@@ -7,6 +7,7 @@ import PhotoViewerModal from '../../components/admin/PhotoViewerModal';
 import { downloadProfilePDF } from '../utils/profilePdfGenerator';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import FranchiseAdsManager from './FranchiseAdsManager';
 
 export default function FranchiseDashboard() {
   const toast = useToast();
@@ -491,7 +492,8 @@ export default function FranchiseDashboard() {
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
     { id: 'customers', label: 'Customer Management', icon: 'group' },
     { id: 'payments', label: 'Payments & Revenue', icon: 'payments' },
-    { id: 'pincodes', label: 'Assigned Pin Codes', icon: 'mark_as_unread' }
+    { id: 'pincodes', label: 'Assigned Pin Codes', icon: 'mark_as_unread' },
+    { id: 'ads', label: 'Ads Manager', icon: 'campaign' }
   ];
 
   return (
@@ -1203,6 +1205,8 @@ export default function FranchiseDashboard() {
                 )}
               </div>
             </div>
+          ) : activeTab === 'ads' ? (
+            <FranchiseAdsManager franchiseData={franchiseData} />
           ) : (
             /* ================= ASSIGNED PIN CODES TAB ================= */
             <div className="space-y-6 text-left w-full max-w-3xl">

@@ -157,7 +157,9 @@ export const INITIAL_STATIC_ADS = [
     amount: 3499,
     requestedAt: '2026-10-17T08:15:00Z',
     notes: 'We want to target families searching in Ernakulam, Alappuzha, and Kottayam.',
-    creativeUrl: '/ad_resort.jpg'
+    creativeUrl: '/ad_resort.jpg',
+    submittedBy: 'BM-EKM-001',
+    franchiseName: 'Ernakulam Central Franchise'
   },
   {
     id: 'ad-pending-02',
@@ -177,7 +179,9 @@ export const INITIAL_STATIC_ADS = [
     amount: 1499,
     requestedAt: '2026-10-17T09:45:00Z',
     notes: 'Immediate launch requested for next week bookings.',
-    creativeUrl: '/ad_mandapam.jpg'
+    creativeUrl: '/ad_mandapam.jpg',
+    submittedBy: 'BM-TSR-001',
+    franchiseName: 'Thrissur Franchise'
   },
 
   // ── Sidebar Ad ──
@@ -211,14 +215,23 @@ export const getStoredAds = () => {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Ensure existing ads have valid creative images if available
+      // Ensure existing ads have valid creative images & franchise attribution if available
       const initialMap = new Map(INITIAL_STATIC_ADS.map((a) => [a.id, a]));
       let hasUpdates = false;
       const hydrated = parsed.map((ad) => {
         const initial = initialMap.get(ad.id);
-        if (initial && initial.creativeUrl && !ad.creativeUrl) {
-          hasUpdates = true;
-          return { ...ad, creativeUrl: initial.creativeUrl };
+        if (initial) {
+          let updated = { ...ad };
+          if (initial.creativeUrl && !ad.creativeUrl) {
+            hasUpdates = true;
+            updated.creativeUrl = initial.creativeUrl;
+          }
+          if (initial.submittedBy && !ad.submittedBy) {
+            hasUpdates = true;
+            updated.submittedBy = initial.submittedBy;
+            updated.franchiseName = initial.franchiseName;
+          }
+          return updated;
         }
         return ad;
       });

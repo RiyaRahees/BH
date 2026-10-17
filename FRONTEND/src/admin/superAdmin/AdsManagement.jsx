@@ -181,6 +181,11 @@ export default function AdsManagement() {
                               {ad.category}
                             </span>
                           )}
+                          {ad.submittedBy && (
+                            <span className="inline-block mt-1 ml-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                              Franchise: {ad.submittedBy}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -422,6 +427,19 @@ export default function AdsManagement() {
                   <span className="text-slate-400">Submission Date:</span>
                   <div className="font-bold text-slate-700">
                     {new Date(selectedAd.requestedAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-400">Submission Origin:</span>
+                  <div className="font-bold text-slate-700">
+                    {selectedAd.submittedBy ? (
+                      <span className="text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block font-mono text-[10px]">
+                        Franchise: {selectedAd.submittedBy}
+                        {selectedAd.franchiseName ? ` (${selectedAd.franchiseName})` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-slate-600">Direct Public Advertiser</span>
+                    )}
                   </div>
                 </div>
               </div>
