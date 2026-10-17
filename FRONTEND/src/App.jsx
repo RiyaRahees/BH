@@ -20,6 +20,7 @@ import Disclaimer from './pages/Disclaimer';
 import CyberSecurityPolicy from './pages/CyberSecurityPolicy';
 import SuccessStories from './pages/SuccessStories';
 import SafetyTips from './pages/SafetyTips';
+import AdvertiseWithUs from './pages/AdvertiseWithUs';
 
 // Admin / Super Admin Page Imports
 import SuperAdminLogin from './admin/superAdmin/Login';
@@ -189,6 +190,8 @@ function App() {
         <Route path="/security" element={<CyberSecurityPolicy />} />
         <Route path="/success-stories" element={<SuccessStories />} />
         <Route path="/safety-tips" element={<SafetyTips />} />
+        <Route path="/advertise" element={<AdvertiseWithUs />} />
+        <Route path="/advertise-with-us" element={<AdvertiseWithUs />} />
 
         {/* Super Admin Routes */}
         <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />

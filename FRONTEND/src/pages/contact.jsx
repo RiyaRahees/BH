@@ -808,6 +808,29 @@ export default function Contact() {
                   </div>
                 </div>
               ))}
+
+              {/* Advertise With Us Card Callout */}
+              <div className="mt-2 p-5 rounded-2xl bg-gradient-to-br from-[#1f0412] via-[#2c081a] to-[#12020a] border border-heritage-gold/40 text-white shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-heritage-gold bg-heritage-gold/15 px-2 py-0.5 rounded">
+                    Business Opportunity
+                  </span>
+                  <span className="material-symbols-outlined text-lg text-heritage-gold">campaign</span>
+                </div>
+                <h4 className="text-base font-bold text-white mb-1">
+                  Want to Advertise With Us?
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  Showcase your wedding hall, bridal boutique, jewellery, or photography directly to thousands of verified Kerala families.
+                </p>
+                <Link
+                  to="/advertise"
+                  className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-gradient-to-r from-heritage-gold via-amber-400 to-amber-500 hover:brightness-110 text-[#12020a] font-bold text-xs rounded-xl transition-all shadow"
+                >
+                  <span>View Ad Plans & Book Slot</span>
+                  <span>→</span>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -4,6 +4,7 @@ import ProfileCard from '../../components/ProfileCard';
 import axiosInstance from '../../src/utils/axiosInstance';
 import { useToast } from '../context/ToastContext';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import AdBanner from '../../components/AdBanner';
 
 const KERALA_DISTRICTS = [
   "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha",
@@ -644,6 +645,9 @@ export default function Search() {
                 </p>
               </div>
 
+              {/* Top Leaderboard Ad */}
+              <AdBanner slot="SEARCH_TOP" tier="LEADERBOARD" />
+
               {isLoading ? (
                 <div className="bg-white py-8 rounded-xl border border-slate-100 flex flex-col items-center justify-center shadow-sm">
                   <LoadingSpinner text="Searching Profiles..." />
@@ -651,9 +655,21 @@ export default function Search() {
                 </div>
               ) : results.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-                  {results.map((profile) => (
-                    <ProfileCard key={profile.id} profile={profile} fullWidth guestStar={religion === 'Hindu' ? guestStar : null} />
-                  ))}
+                  {results.flatMap((profile, index) => {
+                    const elements = [
+                      <ProfileCard key={profile.id} profile={profile} fullWidth guestStar={religion === 'Hindu' ? guestStar : null} />
+                    ];
+                    // Interleave an In-Feed Ad Card after every 6th profile card
+                    if ((index + 1) % 6 === 0) {
+                      const adIndex = Math.floor(index / 6) - 1;
+                      elements.push(
+                        <div key={`ad-feed-${index}`} className="col-span-1">
+                          <AdBanner slot="SEARCH_INFEED" tier="INFEED_CARD" adIndex={adIndex} />
+                        </div>
+                      );
+                    }
+                    return elements;
+                  })}
                 </div>
               ) : (
                 <div className="bg-white p-12 rounded-xl border border-slate-100 text-center">

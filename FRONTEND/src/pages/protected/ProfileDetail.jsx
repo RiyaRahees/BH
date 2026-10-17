@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext';
 import UpgradeModal from '../../components/UpgradeModal';
 import { getEffectivePlan } from '../../utils/planUtils';
 import { getResolvedImageUrl, handleImageError } from '../../utils/imageUtils';
+import AdBanner from '../../../components/AdBanner';
 
 function formatTitleCase(str) {
   if (!str || typeof str !== 'string') return '';
@@ -1061,6 +1062,11 @@ export default function ProfileDetails() {
                 </div>
                 </>
               )}
+          </div>
+
+          {/* Place 3: Profile Detail Sidebar Ad */}
+          <div className="mt-4">
+            <AdBanner slot="SEARCH_SIDEBAR" tier="SIDEBAR" />
           </div>
         </aside>
 

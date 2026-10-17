@@ -12,6 +12,7 @@ const MENU_ITEMS = [
   { id: 'packages', label: 'Packages & Pricing', icon: 'inventory_2' },
   { id: 'franchise', label: 'Franchise Management', icon: 'storefront' },
   { id: 'franchise-requests', label: 'Franchise Requests', icon: 'handshake' },
+  { id: 'ads', label: 'Ads Management', icon: 'campaign' },
   { id: 'head-franchise', label: 'Pincode Allocation', icon: 'pin_drop' },
   {
     id: 'admin-panel',

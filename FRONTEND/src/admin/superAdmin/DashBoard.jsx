@@ -14,6 +14,7 @@ import CasteManagement from './CasteManagement';
 import ContactMessages from '../admin/ContactMessages';
 import FranchisePartnershipRequests from './FranchisePartnershipRequests';
 import MarriageRequestsManagement from './MarriageRequestsManagement';
+import AdsManagement from './AdsManagement';
 
 export default function SuperAdminDashboard() {
     const navigate = useNavigate();
@@ -161,6 +162,8 @@ export default function SuperAdminDashboard() {
                 return <FranchiseManagement />;
             case 'franchise-requests':
                 return <FranchisePartnershipRequests />;
+            case 'ads':
+                return <AdsManagement />;
             case 'head-franchise':
                 return <HeadFranchise />;
             case 'payments':

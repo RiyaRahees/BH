@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import HeroRegistrationForm from '../../components/HeroRegistrationForm';
 import HeroSearch from '../../components/HeroSearch';
 import axiosInstance from '../../src/utils/axiosInstance';
+import AdBanner from '../../components/AdBanner';
 
 export default function Home() {
   const scrollContainerRef = useRef(null);
@@ -256,6 +257,11 @@ export default function Home() {
             >
               <span className="material-symbols-outlined text-[20px] font-semibold">chevron_right</span>
             </button>
+          </div>
+
+          {/* Place 1: Mid-Home Leaderboard Ad */}
+          <div className="pt-8">
+            <AdBanner slot="HOME_MID" tier="LEADERBOARD" />
           </div>
 
         </div>

@@ -254,14 +254,14 @@ export const login = async (req, res) => {
       return res.status(400).json({ error: 'Email or Mobile number and password are required' });
     }
 
-    // 1. Find user (check both email_address and mobile_number)
+    // 1. Find user (check profile_id, email_address, or mobile_number)
     const [users] = await pool.query(
-      'SELECT * FROM user_registration WHERE email_address = ? OR mobile_number = ?',
-      [identifier, identifier]
+      'SELECT * FROM user_registration WHERE profile_id = ? OR email_address = ? OR mobile_number = ?',
+      [identifier, identifier, identifier]
     );
 
     if (users.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password. Please try again.' });
+      return res.status(401).json({ error: 'Invalid ID/email or password. Please try again.' });
     }
 
     const user = users[0];

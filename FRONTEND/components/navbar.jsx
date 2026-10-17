@@ -238,6 +238,13 @@ export default function Navbar() {
             >
               Contact Us
             </a>
+            <Link
+              className={`font-semibold italic text-xs xl:text-sm whitespace-nowrap transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
+                }`}
+              to="/advertise"
+            >
+              Advertise
+            </Link>
           </div>
 
           {/* Right: Search, Login, Register & Hamburger */}
@@ -483,6 +490,14 @@ export default function Navbar() {
                   <span className="material-symbols-outlined text-[14px] text-slate-500">mail</span>
                   Contact Us
                 </a>
+                <Link
+                  to="/advertise"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center gap-2 font-semibold italic text-charcoal-text hover:text-deep-maroon hover:bg-slate-50 text-xs py-2 px-2.5 rounded-lg transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[14px] text-slate-500">campaign</span>
+                  Advertise
+                </Link>
 
               </div>
 
