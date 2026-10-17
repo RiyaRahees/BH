@@ -5,7 +5,7 @@ export default function Banned() {
     <div className="min-h-screen bg-[#fbfaf9] px-4 pt-24 pb-8 sm:pt-28 md:px-margin-desktop flex items-center justify-center fade-in">
       <section className="mx-auto flex w-full max-w-[380px] flex-col">
         <Link to="/" className="mb-8 flex justify-center">
-          <img src="/logo.png" alt="Bharath Marriage" className="h-12 w-auto object-contain" />
+          <img src="/newlogo1.png" alt="Bharath Marriage" className="h-12 w-auto object-contain" />
         </Link>
 
         <div className="rounded-xl border border-rose-100 bg-white p-6 sm:p-8 shadow-sm text-center">

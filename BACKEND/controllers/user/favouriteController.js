@@ -75,7 +75,7 @@ export const getFavourites = async (req, res) => {
       `SELECT 
         uf.favourite_profile_id as id,
         ur.full_name as name,
-        ur.photo_1 as image,
+        IF(ur.photo_1_status = 'APPROVED', ur.photo_1, NULL) as image,
         ur.religion,
         ur.district,
         ur.gender

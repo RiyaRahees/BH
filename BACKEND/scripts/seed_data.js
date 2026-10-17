@@ -56,7 +56,7 @@ const seedData = async () => {
       // Others (e.g. Sikh, Jain -> 'Sikh', 'Other')
       {
         profile_id: 'OTH001', full_name: 'Harpreet Singh', mobile_number: '9876543216', email: 'harpreet@example.com',
-        religion: 'Sikh', dob: '1992-09-09', gender: 'Male', table: 'others',
+        religion: 'Others', dob: '1992-09-09', gender: 'Male', table: 'others',
         profile: { profile_created_for: 'Myself', name: 'Harpreet Singh', gender: 'Male', age: 34, height: '6 ft 0 in', marital_status: 'Single', place: 'Palakkad', country: 'Canada', state: 'Kerala', district: 'Palakkad', education: 'M.Tech', profession: 'Engineer', employment_country: 'Canada' }
       },
       {

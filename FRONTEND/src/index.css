@@ -76,11 +76,36 @@
   body {
     @apply bg-background text-charcoal-text font-body-lg overflow-x-hidden;
   }
+
+  select {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    text-overflow: ellipsis !important;
+  }
+
+  select option {
+    max-width: 100%;
+    word-wrap: break-word;
+  }
   
   .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     display: inline-block;
     vertical-align: middle;
+  }
+
+  img {
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    -webkit-touch-callout: none;
   }
 }
 

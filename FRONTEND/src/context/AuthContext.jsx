@@ -47,7 +47,15 @@ export const AuthProvider = ({ children }) => {
       // We must dynamically import to avoid circular dependencies if any, 
       // or just rely on the global axiosInstance if imported at top.
       const { default: axiosInstance } = await import('../utils/axiosInstance');
-      await axiosInstance.get('/auth/me');
+      const response = await axiosInstance.get('/auth/me');
+      
+      // Keep user state in sync with backend (fetches latest plan, etc.)
+      if (response.data && response.data.user) {
+        // Only update state if it changed, to avoid infinite re-renders or loops
+        // But for simplicity, we can just call setUser and localStorage
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
     } catch (error) {
       // 401 error is handled by axiosInstance interceptor which kicks the user out
       if (error.response && error.response.status === 401) {
@@ -85,7 +93,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, updateUser, verifySession }}>
       {children}
     </AuthContext.Provider>
   );

@@ -286,5 +286,5 @@ export function downloadHoroscope(profile) {
   const img    = new Image();
   img.onload   = () => renderCanvas(ctx, canvas, profile, img);
   img.onerror  = () => renderCanvas(ctx, canvas, profile, null);
-  img.src      = '/logo.png';
+  img.src      = '/newlogo1.png';
 }

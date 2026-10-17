@@ -1,0 +1,34 @@
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/keralabharathmar/BACKEND"
+PassengerBaseURI "/api"
+PassengerNodejs "/home/keralabharathmar/nodevenv/BACKEND/18/bin/node"
+PassengerAppType node
+PassengerStartupFile app.cjs
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # React SPA fallback (strictly excludes /api to prevent 508 Loop Detected)
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_URI} !^/api [NC]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs .jsx .ts .tsx
+  AddType text/css .css
+</IfModule>
+
+# Never cache index.html to ensure clients always get the latest build
+<FilesMatch "index\.html$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </IfModule>
+</FilesMatch>

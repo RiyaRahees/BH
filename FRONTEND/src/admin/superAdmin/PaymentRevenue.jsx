@@ -1,58 +1,35 @@
-import React, { useState } from 'react';
-
-const INITIAL_TRANSACTIONS = [
-  {
-    id: "TXN-9021481",
-    userId: "BKLH000000001",
-    userName: "Aishwarya R.",
-    packageName: "Gold Plan",
-    amount: 600,
-    method: "Razorpay",
-    date: "2026-07-19",
-    status: "Success",
-    reference: "pay_Pk4j8fH29Klsd"
-  },
-  {
-    id: "TXN-9021482",
-    userId: "BKLH000000002",
-    userName: "Adithya K.",
-    packageName: "Silver Plan",
-    amount: 400,
-    method: "Razorpay",
-    date: "2026-07-18",
-    status: "Success",
-    reference: "pay_Pk3d9hS71Jsld"
-  },
-  {
-    id: "TXN-9021483",
-    userId: "BKLH000000003",
-    userName: "Meera Joseph",
-    packageName: "Diamond Plan",
-    amount: 1000,
-    method: "Razorpay",
-    date: "2026-07-20",
-    status: "Success",
-    reference: "pay_Pk5m2jD91Lasd"
-  },
-  {
-    id: "TXN-9021484",
-    userId: "BKLH000000005",
-    userName: "Neha Sharma",
-    packageName: "Platinum Plan",
-    amount: 800,
-    method: "Razorpay",
-    date: "2026-07-20",
-    status: "Success",
-    reference: "pay_Pk6k8fA12Masd"
-  }
-];
+import React, { useState, useEffect } from 'react';
+import axiosInstance from '../../utils/axiosInstance';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { useToast } from '../../context/ToastContext';
 
 export default function PaymentRevenue() {
-  const [transactions] = useState(INITIAL_TRANSACTIONS);
+  const toast = useToast();
+  const [transactions, setTransactions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [planFilter, setPlanFilter] = useState('All');
+  const [religionFilter, setReligionFilter] = useState('All');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axiosInstance.get('/admin/payments');
+        setTransactions(response.data);
+      } catch (err) {
+        console.error('Error fetching transactions:', err);
+        setError('Failed to load transactions');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTransactions();
+  }, []);
 
   // Calculations
   const totalRevenue = transactions
@@ -71,33 +48,69 @@ export default function PaymentRevenue() {
 
     const matchesPlan =
       planFilter === 'All' ||
-      txn.packageName === planFilter;
+      txn.packageName.toLowerCase().includes(planFilter.toLowerCase());
+
+    const matchesReligion =
+      religionFilter === 'All' ||
+      (txn.userReligion && txn.userReligion.toLowerCase() === religionFilter.toLowerCase());
 
     const matchesStartDate = !startDate || txn.date >= startDate;
     const matchesEndDate = !endDate || txn.date <= endDate;
 
-    return matchesSearch && matchesPlan && matchesStartDate && matchesEndDate;
+    return matchesSearch && matchesPlan && matchesReligion && matchesStartDate && matchesEndDate;
   });
 
   const handleDownloadReport = () => {
     if (filteredTxns.length === 0) {
-      alert("No data available to download.");
+      toast.error("No data available to download.");
       return;
     }
 
-    const headers = "Transaction ID,User ID,Name,Package,Amount (INR),Date,Reference ID,Status\n";
-    const rows = filteredTxns.map(t =>
-      `"${t.id}","${t.userId}","${t.userName}","${t.packageName}",${t.amount},"${t.date}","${t.reference}","${t.status}"`
-    ).join("\n");
+    const doc = new jsPDF();
+    
+    // Add header
+    doc.setFontSize(18);
+    doc.setTextColor(40);
+    doc.text("Payments & Revenue Report", 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    
+    // Summary info
+    doc.setFontSize(10);
+    doc.text(`Total Revenue: INR ${totalRevenue.toLocaleString()}`, 14, 38);
+    doc.text(`Paid Subscribers: ${activeSubsCount}`, 14, 44);
 
-    const bom = "\uFEFF";
-    const csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(bom + headers + rows);
-    const link = document.createElement("a");
-    link.setAttribute("href", csvContent);
-    link.setAttribute("download", `matrimony_revenue_report_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Prepare table data
+    const tableColumn = ["Txn ID", "Member", "Plan", "Amount (INR)", "Date", "Expire Date", "Status"];
+    const tableRows = [];
+
+    filteredTxns.forEach(txn => {
+      const rowData = [
+        txn.id,
+        `${txn.userName}\n(${txn.userId})`,
+        txn.packageName,
+        `Rs. ${txn.amount}`,
+        txn.date,
+        txn.expireDate || '-',
+        txn.status
+      ];
+      tableRows.push(rowData);
+    });
+
+    // Generate table
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 50,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [136, 19, 55], textColor: 255 }, // deep-maroon background (#881337)
+    });
+
+    // Save the PDF
+    doc.save(`matrimony_revenue_report_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
   return (
@@ -170,10 +183,26 @@ export default function PaymentRevenue() {
               className="border border-surface-variant rounded-lg py-1 px-2 bg-white text-slate-700 focus:ring-1 focus:ring-deep-maroon focus:outline-none w-full sm:w-[120px] text-[11px]"
             >
               <option value="All">All Plans</option>
-              <option value="Silver Plan">Silver</option>
-              <option value="Gold Plan">Gold</option>
-              <option value="Platinum Plan">Platinum</option>
-              <option value="Diamond Plan">Diamond</option>
+              <option value="Silver">Silver</option>
+              <option value="Gold">Gold</option>
+              <option value="Platinum">Platinum</option>
+              <option value="Diamond">Diamond</option>
+            </select>
+          </div>
+
+          {/* Religion filter select */}
+          <div className="flex items-center gap-1.5 w-full sm:w-fit">
+            <span className="text-[10px] uppercase text-slate-400 font-bold shrink-0">Religion:</span>
+            <select
+              value={religionFilter}
+              onChange={(e) => setReligionFilter(e.target.value)}
+              className="border border-surface-variant rounded-lg py-1 px-2 bg-white text-slate-700 focus:ring-1 focus:ring-deep-maroon focus:outline-none w-full sm:w-[120px] text-[11px]"
+            >
+              <option value="All">All Religions</option>
+              <option value="Hindu">Hindu</option>
+              <option value="Muslim">Muslim</option>
+              <option value="Christian">Christian</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
@@ -229,52 +258,74 @@ export default function PaymentRevenue() {
       {/* This is the ONLY element that should ever scroll horizontally. */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden w-full max-w-full">
         <div className="overflow-x-auto w-full max-w-full [-webkit-overflow-scrolling:touch]">
-          <table className="w-full min-w-[750px] text-left border-collapse text-xs">
+          <table className="w-full min-w-[1080px] text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider">
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Txn ID</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Member</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Plan Name</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Amount</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Method</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Date</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Reference ID</th>
-                <th className="py-3.5 px-4 font-semibold text-[10px]">Status</th>
+              <tr className="bg-slate-50/70 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap">Txn ID</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap min-w-[150px]">Member</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap">Plan Name</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap">Amount</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap text-center">Method</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap">Date</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap">Expire Date</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap">Reference ID</th>
+                <th className="py-3.5 px-4 font-bold text-[10px] whitespace-nowrap text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredTxns.length === 0 ? (
+              {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-slate-400 font-semibold">
+                  <td colSpan="9" className="py-12 text-center text-slate-400 font-semibold">
+                    <span className="material-symbols-outlined text-3xl mb-1 block animate-spin">refresh</span>
+                    Loading transactions...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan="9" className="py-12 text-center text-rose-500 font-semibold">
+                    <span className="material-symbols-outlined text-3xl mb-1 block">error</span>
+                    {error}
+                  </td>
+                </tr>
+              ) : filteredTxns.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="py-12 text-center text-slate-400 font-semibold">
                     <span className="material-symbols-outlined text-3xl mb-1 block">payments</span>
                     No transactions match criteria.
                   </td>
                 </tr>
               ) : (
                 filteredTxns.map((txn) => (
-                  <tr key={txn.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-slate-800">{txn.id}</td>
-                    <td className="py-3.5 px-4">
+                  <tr key={txn.id} className="hover:bg-slate-50/50 transition-colors align-middle">
+                    <td className="py-3.5 px-4 font-bold text-slate-800 whitespace-nowrap align-middle">{txn.id}</td>
+                    <td className="py-3.5 px-4 align-middle">
                       <div>
-                        <p className="font-bold text-slate-800">{txn.userName}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{txn.userId}</p>
+                        <p className="font-bold text-slate-800 leading-snug">{txn.userName}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{txn.userId}</p>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">{txn.packageName}</td>
-                    <td className="py-3.5 px-4 font-bold text-slate-800">₹{txn.amount.toLocaleString()}</td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-50 text-blue-700">
+                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 align-middle font-medium">{txn.packageName}</td>
+                    <td className="py-3.5 px-4 font-bold text-slate-800 whitespace-nowrap align-middle">₹{txn.amount.toLocaleString()}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
+                      <span className="inline-block px-2.5 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-50 text-blue-700 border border-blue-100">
                         {txn.method}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">{txn.date}</td>
-                    <td className="py-3.5 px-4">
-                      <span className="font-mono text-[10px] text-slate-450 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 align-middle font-medium">{txn.date}</td>
+                    <td className="py-3.5 px-4 whitespace-nowrap align-middle font-medium">
+                      {txn.expireDate && txn.expireDate !== 'N/A' ? (
+                        <span className="font-semibold text-slate-700">{txn.expireDate}</span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">-</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 whitespace-nowrap align-middle">
+                      <span className="font-mono text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200">
                         {txn.reference}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase border bg-emerald-50 border-emerald-100 text-emerald-700">
+                    <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase border bg-emerald-50 border-emerald-200 text-emerald-700">
                         {txn.status}
                       </span>
                     </td>

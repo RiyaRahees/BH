@@ -13,7 +13,25 @@ const axiosInstance = axios.create({
 // Request interceptor: Attach access token to headers
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("accessToken");
+    // If request already has an explicit Authorization header, preserve it
+    if (config.headers?.Authorization) {
+      return config;
+    }
+
+    const isAdminPath = typeof window !== 'undefined' && window.location.pathname.includes('/admin');
+    const isFranchisePath = typeof window !== 'undefined' && window.location.pathname.includes('/franchise');
+    const isAdminRoute = config.url?.includes('/admin');
+    const isFranchiseRoute = config.url?.includes('/franchise');
+    let token = null;
+    
+    if ((isAdminRoute || isAdminPath) && localStorage.getItem("adminAccessToken")) {
+      token = localStorage.getItem("adminAccessToken");
+    } else if ((isFranchiseRoute || isFranchisePath) && localStorage.getItem("franchiseToken")) {
+      token = localStorage.getItem("franchiseToken");
+    } else {
+      token = localStorage.getItem("accessToken");
+    }
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -43,28 +61,49 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
 
     if (
-      originalRequest.url?.endsWith("/auth/refresh-token") ||
-      originalRequest.url?.endsWith("/auth/login") ||
-      originalRequest.url?.endsWith("/auth/register")
+      originalRequest.url?.includes("/auth/refresh-token") ||
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/register")
     ) {
       return Promise.reject(error);
     }
 
     if (
       error.response?.status === 403 &&
-      error.response.data?.error?.toLowerCase().includes("banned")
+      (error.response.data?.error?.toLowerCase().includes("banned") || 
+       error.response.data?.error?.toLowerCase().includes("blocked"))
     ) {
       localStorage.clear();
 
-      if (window.location.pathname !== "/banned") {
+      if (window.location.pathname !== "/banned" && error.response.data?.error?.toLowerCase().includes("banned")) {
         window.location.href = "/banned";
+      } else if (window.location.pathname !== "/login" && error.response.data?.error?.toLowerCase().includes("blocked")) {
+        window.location.href = "/login";
       }
 
       return Promise.reject(error);
     }
 
+    const isAdminRoute = originalRequest.url?.includes('/admin');
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      
+      // Admin tokens don't have refresh mechanism in this app. 
+      // If an admin API returns 401, they must re-login.
+      if (isAdminRoute) {
+        localStorage.removeItem('adminAccessToken');
+        localStorage.removeItem('adminRole');
+        localStorage.removeItem('isAdminLoggedIn');
+        
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/super-admin') && currentPath !== "/super-admin/login") {
+           window.location.href = "/super-admin/login";
+        } else if (currentPath.includes('/admin') && currentPath !== "/admin/login") {
+           window.location.href = "/admin/login";
+        }
+        return Promise.reject(error);
+      }
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -90,7 +129,6 @@ axiosInstance.interceptors.response.use(
 
         localStorage.setItem("accessToken", accessToken);
 
-        axiosInstance.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
         processQueue(null, accessToken);
@@ -101,10 +139,15 @@ axiosInstance.interceptors.response.use(
         processQueue(err);
         isRefreshing = false;
 
-        localStorage.clear();
+        const isAdminPath = typeof window !== 'undefined' && (window.location.pathname.includes("/admin") || window.location.pathname.includes("/super-admin") || window.location.pathname.includes("/franchise"));
 
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
+        if (!isAdminPath) {
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("user");
+
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
+          }
         }
 
         return Promise.reject(err);

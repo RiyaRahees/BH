@@ -9,6 +9,14 @@ const nakshatras = [
 ];
 const rasis = ['മേടം','ഇടവം','മിഥുനം','കർക്കിടകം','ചിംഹം','കന്നി','തുലാം','വൃശ്ചികം','ധനു','മകരം','കുംഭം','മീനം'];
 
+const getMaxDate18YearsAgo = () => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const maxDate = getMaxDate18YearsAgo();
+
 function RasiChart({ title, cells, rasiName, dob }) {
   const Cell = ({ num, children, col, row, className = "" }) => (
     <div
@@ -190,6 +198,7 @@ export default function Porutham() {
                     value={groom.dob}
                     onChange={(e) => handleChange('groom', 'dob', e.target.value)}
                     className="w-full border border-slate-200 rounded-md md:rounded-lg py-1.5 md:py-2 px-2 md:px-3 text-[10px] md:text-xs text-charcoal-text focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:border-deep-maroon"
+                    max={maxDate}
                     required
                   />
                 </div>
@@ -238,6 +247,7 @@ export default function Porutham() {
                     value={bride.dob}
                     onChange={(e) => handleChange('bride', 'dob', e.target.value)}
                     className="w-full border border-slate-200 rounded-md md:rounded-lg py-1.5 md:py-2 px-2 md:px-3 text-[10px] md:text-xs text-charcoal-text focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:border-deep-maroon"
+                    max={maxDate}
                     required
                   />
                 </div>
@@ -257,6 +267,14 @@ export default function Porutham() {
           </div>
         </form>
 
+        {/* Small Disclaimer */}
+        <div className="mt-4 p-3 rounded-lg bg-amber-50/70 border border-amber-200/60 flex items-start gap-2.5 text-left">
+          <span className="material-symbols-outlined text-amber-600 text-base shrink-0 mt-0.5 select-none">info</span>
+          <p className="text-[10px] md:text-[11px] text-charcoal-text/75 leading-relaxed">
+            <strong className="text-charcoal-text font-semibold">Disclaimer:</strong> Porutham compatibility results are generated using traditional astrological principles and Vedic star algorithms for informational guidance. Please consult a qualified astrologer or family priest for comprehensive horoscope evaluation and final decisions.
+          </p>
+        </div>
+
         {/* Result */}
         {result && (
           <>
@@ -265,8 +283,9 @@ export default function Porutham() {
                 Entered Details
               </h3>
 
-              <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
-                <table className="w-full min-w-[560px] md:min-w-0 border-collapse text-left">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-[#1c1c22]">
                       <th className="text-white text-[10px] md:text-xs font-semibold py-2.5 md:py-3 px-3 md:px-4 rounded-tl-lg">
@@ -288,10 +307,10 @@ export default function Porutham() {
                   </thead>
                   <tbody>
                     <tr className="border-b border-slate-100">
-                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 whitespace-nowrap">
+                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 break-words">
                         {result.groom.name} (Groom)
                       </td>
-                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 whitespace-nowrap">
+                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 break-words">
                         {result.groom.city}
                       </td>
                       <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 whitespace-nowrap">
@@ -305,10 +324,10 @@ export default function Porutham() {
                       </td>
                     </tr>
                     <tr>
-                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 whitespace-nowrap">
+                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 break-words">
                         {result.bride.name} (Bride)
                       </td>
-                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 whitespace-nowrap">
+                      <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 break-words">
                         {result.bride.city}
                       </td>
                       <td className="text-charcoal-text text-[11px] md:text-sm py-2.5 md:py-3 px-3 md:px-4 whitespace-nowrap">
@@ -323,6 +342,55 @@ export default function Porutham() {
                     </tr>
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-4 mt-2">
+                {/* Groom Card */}
+                <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100 shadow-sm">
+                  <h4 className="font-bold text-deep-maroon text-[12px] uppercase tracking-wide mb-3 border-b border-slate-200 pb-1.5">
+                    Groom Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[11px]">
+                    <div className="text-soft-gray font-semibold">Name</div>
+                    <div className="text-right font-medium text-charcoal-text break-words">{result.groom.name}</div>
+                    
+                    <div className="text-soft-gray font-semibold">City</div>
+                    <div className="text-right font-medium text-charcoal-text break-words">{result.groom.city}</div>
+                    
+                    <div className="text-soft-gray font-semibold">Date of Birth</div>
+                    <div className="text-right font-medium text-charcoal-text">{result.groom.dob}</div>
+                    
+                    <div className="text-soft-gray font-semibold">Nakshatram</div>
+                    <div className="text-right font-bold text-deep-maroon">{result.groom.nak}</div>
+                    
+                    <div className="text-soft-gray font-semibold">Rasi</div>
+                    <div className="text-right font-medium text-charcoal-text">{result.groom.rasi}</div>
+                  </div>
+                </div>
+
+                {/* Bride Card */}
+                <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-100 shadow-sm">
+                  <h4 className="font-bold text-deep-maroon text-[12px] uppercase tracking-wide mb-3 border-b border-slate-200 pb-1.5">
+                    Bride Details
+                  </h4>
+                  <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[11px]">
+                    <div className="text-soft-gray font-semibold">Name</div>
+                    <div className="text-right font-medium text-charcoal-text break-words">{result.bride.name}</div>
+                    
+                    <div className="text-soft-gray font-semibold">City</div>
+                    <div className="text-right font-medium text-charcoal-text break-words">{result.bride.city}</div>
+                    
+                    <div className="text-soft-gray font-semibold">Date of Birth</div>
+                    <div className="text-right font-medium text-charcoal-text">{result.bride.dob}</div>
+                    
+                    <div className="text-soft-gray font-semibold">Nakshatram</div>
+                    <div className="text-right font-bold text-deep-maroon">{result.bride.nak}</div>
+                    
+                    <div className="text-soft-gray font-semibold">Rasi</div>
+                    <div className="text-right font-medium text-charcoal-text">{result.bride.rasi}</div>
+                  </div>
+                </div>
               </div>
             </div>
 

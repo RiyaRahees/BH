@@ -28,7 +28,7 @@ export default function ForgotPassword() {
     <div className="min-h-screen bg-[#fbfaf9] px-4 pt-24 pb-8 sm:pt-28 md:px-margin-desktop flex items-center justify-center fade-in">
       <section className="mx-auto flex w-full max-w-[340px] flex-col sm:max-w-[380px]">
         <Link to="/" className="mb-6 flex justify-center">
-          <img src="/logo.png" alt="Bharath Marriage" className="h-12 w-auto object-contain" />
+          <img src="/newlogo1.png" alt="Bharath Marriage" className="h-12 w-auto object-contain" />
         </Link>
 
         <div className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm sm:p-5">

@@ -4,11 +4,16 @@ import axiosInstance from '../../utils/axiosInstance';
 import SuperAdminSidebar from '../../../components/admin/SuperAdminSidebar';
 import StaffManagment from './StaffManagment';
 import UserManagement from './UserManagement';
+import ReportManagement from '../admin/ReportManagement';
 import PackagesManagement from './PackagesManagement';
 import FranchiseManagement from './Franchise Management';
 import HeadFranchise from './Headfranchise';
 import PaymentRevenue from './PaymentRevenue';
 import SystemSetting from './SystemSetting';
+import CasteManagement from './CasteManagement';
+import ContactMessages from '../admin/ContactMessages';
+import FranchisePartnershipRequests from './FranchisePartnershipRequests';
+import MarriageRequestsManagement from './MarriageRequestsManagement';
 
 export default function SuperAdminDashboard() {
     const navigate = useNavigate();
@@ -17,8 +22,20 @@ export default function SuperAdminDashboard() {
     const [metrics, setMetrics] = useState({
         totalUsers: 0,
         totalStaffs: 0,
-        monthlyRevenue: '₹0'
+        monthlyRevenue: '₹0',
+        recentLogs: []
     });
+
+    const formatTimeAgo = (dateString) => {
+        if (!dateString) return '';
+        const diffInMs = new Date() - new Date(dateString);
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        if (diffInHours < 24) {
+            return diffInHours <= 0 ? 'Just now' : `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+        }
+        const diffInDays = Math.floor(diffInHours / 24);
+        return diffInDays === 1 ? 'Yesterday' : `${diffInDays} days ago`;
+    };
 
     useEffect(() => {
         const fetchMetrics = async () => {
@@ -29,7 +46,11 @@ export default function SuperAdminDashboard() {
                 console.error('Error fetching metrics', error);
             }
         };
-        fetchMetrics();
+        
+        fetchMetrics(); // Initial fetch
+        const interval = setInterval(fetchMetrics, 30000); // Auto-refresh every 30 seconds
+        
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
@@ -45,6 +66,7 @@ export default function SuperAdminDashboard() {
     const handleLogout = () => {
         localStorage.removeItem('adminRole');
         localStorage.removeItem('isAdminLoggedIn');
+        localStorage.removeItem('adminAccessToken');
         navigate('/super-admin/login');
     };
 
@@ -100,37 +122,53 @@ export default function SuperAdminDashboard() {
                                 Recent Admin Log
                             </h3>
                             <div className="divide-y divide-slate-100 text-xs">
-                                <div className="py-2.5 flex items-center justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <p className="font-semibold text-slate-800 truncate">New staff member added: Shanu V. R.</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5">By Super Admin &bull; 2 hours ago</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-md shrink-0">Staff</span>
-                                </div>
-                                
-                                <div className="py-2.5 flex items-center justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <p className="font-semibold text-slate-800 truncate">Subscription plan pricing updated: Premium Gold</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5">By Super Admin &bull; Yesterday</p>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-md shrink-0">Finance</span>
-                                </div>
+                                {metrics?.recentLogs && metrics.recentLogs.length > 0 ? (
+                                    metrics.recentLogs.map((log, index) => (
+                                        <div key={index} className="py-2.5 flex items-center justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-slate-800 truncate">{log.message}</p>
+                                                <p className="text-[10px] text-slate-400 mt-0.5">System &bull; {formatTimeAgo(log.date)}</p>
+                                            </div>
+                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md shrink-0 ${
+                                                log.type === 'Finance' ? 'bg-amber-50 text-amber-700' :
+                                                log.type === 'Staff' ? 'bg-slate-100 text-slate-600' :
+                                                'bg-blue-50 text-blue-700'
+                                            }`}>
+                                                {log.type}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-4 text-center text-slate-400">No recent activity</div>
+                                )}
                             </div>
                         </div>
                     </div>
                 );
             case 'users':
                 return <UserManagement />;
+            case 'marriage-requests':
+                return <MarriageRequestsManagement />;
+            case 'reports':
+                return <ReportManagement />;
+            case 'contacts':
+                return <ContactMessages />;
             case 'staff':
                 return <StaffManagment />;
             case 'packages':
                 return <PackagesManagement />;
             case 'franchise':
                 return <FranchiseManagement />;
+            case 'franchise-requests':
+                return <FranchisePartnershipRequests />;
             case 'head-franchise':
                 return <HeadFranchise />;
             case 'payments':
                 return <PaymentRevenue />;
+            case 'settings':
+                return <SystemSetting />;
+            case 'castes':
+                return <CasteManagement />;
             case 'content':
                 return (
                     <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-xs min-w-0">
@@ -167,26 +205,16 @@ export default function SuperAdminDashboard() {
           Without it, overflow-x-hidden below has nothing to clip against
           because this box itself has already become too wide. */}
             <div className="flex-1 lg:pl-64 flex flex-col min-h-screen min-w-0">
-                {/* Top Header */}
-                <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
-                    <div className="flex items-center gap-3">
-                        {/* Mobile Menu Toggle Button */}
-                        <button
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer transition-colors"
-                        >
-                            <span className="material-symbols-outlined">menu</span>
-                        </button>
-                        <span className="text-xs font-bold text-deep-maroon bg-deep-maroon/5 border border-deep-maroon/10 px-2 py-0.5 rounded-md uppercase tracking-widest hidden sm:inline-block">
-                            Super Admin Mode
-                        </span>
-                    </div>
-
-                    <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/60 rounded-full flex items-center gap-1.5 select-none">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>Live Session</span>
-                    </div>
-                </header>
+                {/* Mobile Menu Toggle (Only on small screens) */}
+                <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center sticky top-0 z-20">
+                    <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 cursor-pointer transition-colors flex items-center"
+                        title="Open Menu"
+                    >
+                        <span className="material-symbols-outlined text-2xl">menu</span>
+                    </button>
+                </div>
 
                 {/* Content View Container */}
                 <main className="p-6 sm:p-8 flex-1 text-left w-full min-w-0 max-w-full overflow-x-hidden">

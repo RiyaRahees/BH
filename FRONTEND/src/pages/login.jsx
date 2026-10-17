@@ -8,6 +8,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [errorModal, setErrorModal] = useState({ isOpen: false, message: '' });
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -18,10 +19,14 @@ export default function Login() {
       setLoading(true);
       const response = await axiosInstance.post('/auth/login', { identifier, password });
 
-      const { accessToken, user } = response.data;
+      if (response.data && response.data.error) {
+        throw new Error(response.data.error);
+      }
+
+      const { accessToken, user } = response.data || {};
       
       if (!accessToken || !user) {
-        throw new Error('Invalid response from server. Are you sure the API is running and accessible?');
+        throw new Error(response.data?.message || 'Invalid response from server. Are you sure the API is running and accessible?');
       }
       
       localStorage.setItem('accessToken', accessToken);
@@ -33,12 +38,12 @@ export default function Login() {
       console.error('Login Error:', error);
       
       const status = error.response?.status;
-      const message = error.response?.data?.error || '';
+      const message = error.response?.data?.error || error.response?.data?.message || '';
       
       if (status === 403 && message.toLowerCase().includes('banned')) {
         navigate('/banned');
       } else {
-        alert(message || error.message || 'Login failed. Please check your credentials.');
+        setErrorModal({ isOpen: true, message: message || error.message || 'Invalid email or password. Please try again.' });
       }
     } finally {
       setLoading(false);
@@ -49,7 +54,7 @@ export default function Login() {
     <div className="min-h-screen bg-[#fbfaf9] px-4 pt-24 pb-8 sm:pt-28 md:px-margin-desktop flex items-center justify-center fade-in">
       <section className="mx-auto flex w-full max-w-[340px] flex-col sm:max-w-[380px]">
         <Link to="/" className="mb-6 flex justify-center">
-          <img src="/logo.png" alt="Bharath Marriage" className="h-12 w-auto object-contain" />
+          <img src="/newlogo1.png" alt="Bharath Marriage" className="h-12 w-auto object-contain" />
         </Link>
 
         <div className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm sm:p-5">
@@ -120,6 +125,33 @@ export default function Login() {
           </p>
         </div>
       </section>
+
+      {/* Custom Error Modal */}
+      {errorModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 fade-in">
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 
+            onClick={() => setErrorModal({ isOpen: false, message: '' })}
+          ></div>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm relative z-10 animate-scale-up overflow-hidden border border-slate-100">
+            <div className="p-6 text-center">
+              <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-amber-50 mb-4 border border-amber-100">
+                <span className="material-symbols-outlined text-amber-500 text-3xl">error</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Access Denied</h3>
+              <p className="text-sm text-slate-500 font-medium leading-relaxed">{errorModal.message}</p>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 flex justify-center border-t border-slate-100/60">
+              <button
+                onClick={() => setErrorModal({ isOpen: false, message: '' })}
+                className="px-8 py-2 bg-deep-maroon text-white rounded-xl text-xs font-bold shadow-md hover:bg-primary transition-colors shadow-deep-maroon/20 w-full"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

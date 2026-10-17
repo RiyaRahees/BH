@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../../utils/axiosInstance';
+import { useToast } from '../../context/ToastContext';
 
 const ALL_AVAILABLE_FEATURES = [
   "Profile Listing",
@@ -13,6 +14,7 @@ const ALL_AVAILABLE_FEATURES = [
   "Video Calling"
 ];
 export default function PackagesManagement() {
+  const toast = useToast();
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,6 +27,9 @@ export default function PackagesManagement() {
     features: []
   });
   const [selectedFeatureToAdd, setSelectedFeatureToAdd] = useState('');
+  const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isFeatureDropdownOpen, setIsFeatureDropdownOpen] = useState(false);
 
   useEffect(() => {
     const fetchPackages = async () => {
@@ -92,7 +97,7 @@ export default function PackagesManagement() {
 
   const handleSavePackage = async () => {
     if (!editingFields.name.trim() || editingFields.price < 0) {
-      alert("Please enter a valid package name and price.");
+      toast.error("Please enter a valid package name and price.");
       return;
     }
     
@@ -108,9 +113,10 @@ export default function PackagesManagement() {
       const updatedPlan = response.data.plan;
       setPackages(prev => prev.map(p => p.id === updatedPlan.id ? updatedPlan : p));
       setSelectedPackage(null);
+      toast.success("Package updated successfully!");
     } catch (err) {
       console.error('Failed to update package:', err);
-      alert('Failed to update package. Please try again.');
+      toast.error('Failed to update package. Please try again.');
     }
   };
 
@@ -165,7 +171,9 @@ export default function PackagesManagement() {
                   }`}>
                     {pkg.status}
                   </span>
-                  <span className="text-[10px] text-slate-400 mt-1 font-semibold">Valid: {pkg.duration}</span>
+                  <span className="text-[10px] text-slate-400 mt-1 font-semibold">
+                    Valid: {/^\d+$/.test(String(pkg.duration).trim()) ? `${pkg.duration} Days` : pkg.duration}
+                  </span>
                 </div>
               </div>
 
@@ -174,7 +182,11 @@ export default function PackagesManagement() {
                 <span className="text-2xl font-black text-slate-800">
                   {pkg.price === 0 ? "Free" : `₹${pkg.price}`}
                 </span>
-                {pkg.price > 0 && <span className="text-[10px] text-slate-455 font-bold">/ {pkg.duration}</span>}
+                {pkg.price > 0 && (
+                  <span className="text-[10px] text-slate-455 font-bold">
+                    / {/^\d+$/.test(String(pkg.duration).trim()) ? `${pkg.duration} Days` : pkg.duration}
+                  </span>
+                )}
               </div>
 
               {/* Features List */}
@@ -237,7 +249,7 @@ export default function PackagesManagement() {
             <div className="p-6 overflow-y-auto space-y-4 text-xs font-semibold text-slate-700 flex-1">
               
               {/* Name & Pricing Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] uppercase text-slate-450 font-bold">Package Name</label>
                   <input
@@ -259,27 +271,107 @@ export default function PackagesManagement() {
               </div>
 
               {/* Duration & Status Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] uppercase text-slate-455 font-bold">Plan Duration</label>
-                  <input
-                    type="text"
-                    value={editingFields.duration}
-                    onChange={(e) => handleUpdateField('duration', e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 font-medium bg-slate-50/50 focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:bg-white"
-                    placeholder="e.g. 1 Month, Unlimited"
-                  />
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsDurationDropdownOpen(!isDurationDropdownOpen)}
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-deep-maroon text-left cursor-pointer"
+                    >
+                      <span>
+                        {editingFields.duration ? 
+                          (editingFields.duration / 28) + ' Month' + (editingFields.duration / 28 > 1 ? 's' : '') 
+                          : 'Select Duration'}
+                      </span>
+                      <span className="material-symbols-outlined text-slate-400 text-lg">
+                        {isDurationDropdownOpen ? 'expand_less' : 'expand_more'}
+                      </span>
+                    </button>
+                    
+                    {isDurationDropdownOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10"
+                          onClick={() => setIsDurationDropdownOpen(false)}
+                        ></div>
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                          {[...Array(12)].map((_, i) => (
+                            <button
+                              key={i + 1}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 border-b border-slate-50 last:border-0 font-medium text-slate-700"
+                              onClick={() => {
+                                handleUpdateField('duration', (i + 1) * 28);
+                                setIsDurationDropdownOpen(false);
+                              }}
+                            >
+                              {i + 1} Month{i + 1 > 1 ? 's' : ''}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 font-medium text-slate-700"
+                            onClick={() => {
+                              handleUpdateField('duration', 24 * 28);
+                              setIsDurationDropdownOpen(false);
+                            }}
+                          >
+                            24 Months
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] uppercase text-slate-455 font-bold">Plan Status</label>
-                  <select
-                    value={editingFields.status}
-                    onChange={(e) => handleUpdateField('status', e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-deep-maroon"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg p-2 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-deep-maroon text-left cursor-pointer"
+                    >
+                      <span className={editingFields.status === 'Active' ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                        {editingFields.status || 'Select Status'}
+                      </span>
+                      <span className="material-symbols-outlined text-slate-400 text-lg">
+                        {isStatusDropdownOpen ? 'expand_less' : 'expand_more'}
+                      </span>
+                    </button>
+
+                    {isStatusDropdownOpen && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10"
+                          onClick={() => setIsStatusDropdownOpen(false)}
+                        ></div>
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 font-bold text-emerald-600 border-b border-slate-50"
+                            onClick={() => {
+                              handleUpdateField('status', 'Active');
+                              setIsStatusDropdownOpen(false);
+                            }}
+                          >
+                            Active
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 font-bold text-rose-600"
+                            onClick={() => {
+                              handleUpdateField('status', 'Inactive');
+                              setIsStatusDropdownOpen(false);
+                            }}
+                          >
+                            Inactive
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -289,24 +381,49 @@ export default function PackagesManagement() {
                 
                 {/* Feature Add Dropdown Selection */}
                 <div className="flex gap-2">
-                  <select
-                    value={selectedFeatureToAdd}
-                    onChange={(e) => setSelectedFeatureToAdd(e.target.value)}
-                    className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-deep-maroon"
-                    disabled={remainingFeatures.length === 0}
-                  >
-                    {remainingFeatures.length === 0 ? (
-                      <option value="">All available features added</option>
-                    ) : (
-                      remainingFeatures.map((feature, index) => (
-                        <option key={index} value={feature}>{feature}</option>
-                      ))
+                  <div className="relative flex-1">
+                    <button
+                      type="button"
+                      disabled={remainingFeatures.length === 0}
+                      onClick={() => setIsFeatureDropdownOpen(!isFeatureDropdownOpen)}
+                      className="w-full flex items-center justify-between border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium bg-white focus:outline-none focus:ring-1 focus:ring-deep-maroon text-left cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed"
+                    >
+                      <span className="truncate">
+                        {remainingFeatures.length === 0 ? 'All features added' : (selectedFeatureToAdd || 'Select a feature')}
+                      </span>
+                      <span className="material-symbols-outlined text-slate-400 text-lg">
+                        {isFeatureDropdownOpen ? 'expand_less' : 'expand_more'}
+                      </span>
+                    </button>
+
+                    {isFeatureDropdownOpen && remainingFeatures.length > 0 && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10"
+                          onClick={() => setIsFeatureDropdownOpen(false)}
+                        ></div>
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+                          {remainingFeatures.map((feature, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-50 last:border-0 font-medium text-slate-700 truncate"
+                              onClick={() => {
+                                setSelectedFeatureToAdd(feature);
+                                setIsFeatureDropdownOpen(false);
+                              }}
+                            >
+                              {feature}
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
-                  </select>
+                  </div>
                   <button
                     onClick={handleAddFeature}
                     disabled={!selectedFeatureToAdd}
-                    className="px-3.5 py-1.5 bg-deep-maroon hover:bg-primary text-white rounded-lg font-bold cursor-pointer transition-colors disabled:opacity-40"
+                    className="px-4 py-1.5 bg-deep-maroon text-white font-bold rounded-lg text-xs hover:bg-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
                   >
                     Add
                   </button>

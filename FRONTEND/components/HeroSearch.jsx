@@ -1,18 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../src/utils/axiosInstance';
 
 const religionOptions = [
-  { value: '', label: 'All Religions' },
+  { value: 'All', label: 'All Religions' },
   { value: 'Hindu', label: 'Hindu' },
   { value: 'Christian', label: 'Christian' },
   { value: 'Muslim', label: 'Muslim' },
-  { value: 'Sikh', label: 'Sikh' }
-];
-
-const casteOptions = [
-  { value: 'Open to all', label: 'All Castes' },
-  { value: 'Brahmin', label: 'Brahmin' },
-  { value: 'Reddy', label: 'Reddy' }
+  { value: 'Other', label: 'Other' }
 ];
 
 const lookingForOptions = [
@@ -22,11 +17,20 @@ const lookingForOptions = [
 
 const districtOptions = [
   { value: '', label: 'All Districts' },
-  { value: 'Kochi', label: 'Kochi' },
-  { value: 'Bangalore', label: 'Bangalore' },
-  { value: 'Chennai', label: 'Chennai' },
-  { value: 'Delhi', label: 'Delhi' },
-  { value: 'Hyderabad', label: 'Hyderabad' }
+  { value: 'Thiruvananthapuram', label: 'Thiruvananthapuram' },
+  { value: 'Kollam', label: 'Kollam' },
+  { value: 'Pathanamthitta', label: 'Pathanamthitta' },
+  { value: 'Alappuzha', label: 'Alappuzha' },
+  { value: 'Kottayam', label: 'Kottayam' },
+  { value: 'Idukki', label: 'Idukki' },
+  { value: 'Ernakulam', label: 'Ernakulam' },
+  { value: 'Thrissur', label: 'Thrissur' },
+  { value: 'Palakkad', label: 'Palakkad' },
+  { value: 'Malappuram', label: 'Malappuram' },
+  { value: 'Kozhikode', label: 'Kozhikode' },
+  { value: 'Wayanad', label: 'Wayanad' },
+  { value: 'Kannur', label: 'Kannur' },
+  { value: 'Kasaragod', label: 'Kasaragod' }
 ];
 
 const maritalStatusOptions = [
@@ -47,17 +51,51 @@ export default function HeroSearch() {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-  const [religion, setReligion] = useState('Hindu');
+  const [religion, setReligion] = useState('All');
   const [caste, setCaste] = useState('Open to all');
+  const [allCastes, setAllCastes] = useState([]);
   const [lookingFor, setLookingFor] = useState('Bride');
   const [location, setLocation] = useState('');
   
-  // Advanced filters state
   const [maritalStatus, setMaritalStatus] = useState('Never Married');
-  const [ageRange, setAgeRange] = useState('');
+  const [minAge, setMinAge] = useState('18');
+  const [maxAge, setMaxAge] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  const isLookingForGroom = (gender) => ['groom', 'male', 'man'].includes(String(gender || '').trim().toLowerCase());
+  const getMinAllowedAge = (gender) => isLookingForGroom(gender) ? 21 : 18;
+
+  const handleLookingForSelect = (val) => {
+    setLookingFor(val);
+    setActiveDropdown(null);
+    const minAllowed = getMinAllowedAge(val);
+    if (!minAge || minAge === '18' || minAge === '21' || parseInt(minAge, 10) < minAllowed) {
+      setMinAge(String(minAllowed));
+    }
+  };
+
   const [activeDropdown, setActiveDropdown] = useState(null);
+
+  useEffect(() => {
+    axiosInstance.get('/public/castes')
+      .then(res => setAllCastes(res.data.castes || []))
+      .catch(() => {
+        axiosInstance.get('/admin/castes')
+          .then(res => setAllCastes(res.data.castes || []))
+          .catch(err => console.error('Failed to fetch castes in search bar', err));
+      });
+  }, []);
+
+  // Filter castes by selected religion
+  const dynamicCasteOptions = [
+    { value: 'Open to all', label: 'All Castes' },
+    ...allCastes
+      .filter((c) => {
+        if (!religion || religion === 'All' || religion === 'All Religions') return true;
+        return c.religion?.toLowerCase() === religion.toLowerCase();
+      })
+      .map((c) => ({ value: c.caste_name, label: c.caste_name }))
+  ];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -70,7 +108,19 @@ export default function HeroSearch() {
   }, []);
 
   const handleQuickSearch = () => {
-    navigate(`/search?gender=${lookingFor}&religion=${religion}&caste=${caste}&location=${location}&maritalStatus=${maritalStatus}&age=${ageRange}`);
+    const params = new URLSearchParams();
+    params.set('gender', lookingFor);
+    if (religion && religion !== 'All' && religion !== 'All Religions') {
+      params.set('religion', religion);
+    }
+    if (caste && caste !== 'Open to all') params.set('caste', caste);
+    if (location) params.set('location', location);
+    // Only include maritalStatus if it's a non-default selection
+    if (maritalStatus && maritalStatus !== 'Never Married') params.set('maritalStatus', maritalStatus);
+    if (minAge || maxAge) {
+      params.set('age', `${minAge || 18}-${maxAge || 60}`);
+    }
+    navigate(`/search?${params.toString()}`);
   };
 
   return (
@@ -100,6 +150,7 @@ export default function HeroSearch() {
                   type="button"
                   onClick={() => {
                     setReligion(option.value);
+                    setCaste('Open to all');
                     setActiveDropdown(null);
                   }}
                   className={`w-full text-left px-3 py-2 text-[10px] sm:text-xs font-semibold hover:bg-slate-50 transition-colors flex justify-between items-center ${
@@ -125,7 +176,7 @@ export default function HeroSearch() {
           >
             <span className="block text-[6.5px] sm:text-[9px] text-white/70 font-semibold leading-none mb-0.5 select-none uppercase tracking-wider">Caste</span>
             <span className="block font-bold text-white text-[10px] sm:text-xs leading-none">
-              {casteOptions.find(o => o.value === caste)?.label || 'All Castes'}
+              {dynamicCasteOptions.find(o => o.value === caste)?.label || 'All Castes'}
             </span>
             <span className={`absolute right-1.5 sm:right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[11px] sm:text-[15px] text-white/80 transition-transform duration-200 pointer-events-none ${activeDropdown === 'caste' ? 'rotate-180' : ''}`}>
               keyboard_arrow_down
@@ -133,7 +184,7 @@ export default function HeroSearch() {
           </button>
           {activeDropdown === 'caste' && (
             <div className="absolute left-0 right-0 mt-1 w-full bg-white rounded-lg shadow-xl border border-slate-100 py-1 z-55 animate-fade-in text-left max-h-60 overflow-y-auto">
-              {casteOptions.map(option => (
+              {dynamicCasteOptions.map(option => (
                 <button
                   key={option.value}
                   type="button"
@@ -176,10 +227,7 @@ export default function HeroSearch() {
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => {
-                    setLookingFor(option.value);
-                    setActiveDropdown(null);
-                  }}
+                  onClick={() => handleLookingForSelect(option.value)}
                   className={`w-full text-left px-3 py-2 text-[10px] sm:text-xs font-semibold hover:bg-slate-50 transition-colors flex justify-between items-center ${
                     lookingFor === option.value ? 'text-deep-maroon bg-deep-maroon/5 font-bold' : 'text-charcoal-text font-medium'
                   }`}
@@ -245,7 +293,7 @@ export default function HeroSearch() {
 
       {/* Advanced Filters Section */}
       {showAdvanced && (
-        <div className="grid grid-cols-2 gap-2 md:gap-3.5 mt-2.5 pt-2.5 border-t border-white/20 animate-slide-up-fade">
+        <div className="grid grid-cols-2 gap-2 md:gap-3.5 mt-2.5 pt-2.5 border-t border-white/20 items-end animate-slide-up-fade">
           
           {/* Marital Status Dropdown */}
           <div className="relative w-full">
@@ -286,43 +334,44 @@ export default function HeroSearch() {
             )}
           </div>
 
-          {/* Age Range Dropdown */}
-          <div className="relative w-full">
-            <button
-              type="button"
-              onClick={() => setActiveDropdown(activeDropdown === 'ageRange' ? null : 'ageRange')}
-              className="relative border border-white/30 rounded-lg py-1 px-2 sm:py-1.5 sm:px-2.5 bg-transparent text-left w-full hover:bg-white/10 transition-all cursor-pointer flex flex-col justify-center min-h-[34px] sm:min-h-[40px]"
-            >
-              <span className="block text-[6.5px] sm:text-[9px] text-white/70 font-semibold leading-none mb-0.5 select-none uppercase tracking-wider">Age Range</span>
-              <span className="block font-bold text-white text-[10px] sm:text-xs leading-none">
-                {ageRangeOptions.find(o => o.value === ageRange)?.label || 'Any Age'}
-              </span>
-              <span className={`absolute right-1.5 sm:right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[11px] sm:text-[15px] text-white/80 transition-transform duration-200 pointer-events-none ${activeDropdown === 'ageRange' ? 'rotate-180' : ''}`}>
-                keyboard_arrow_down
-              </span>
-            </button>
-            {activeDropdown === 'ageRange' && (
-              <div className="absolute left-0 right-0 mt-1 w-full bg-white rounded-lg shadow-xl border border-slate-100 py-1 z-55 animate-fade-in text-left max-h-60 overflow-y-auto">
-                {ageRangeOptions.map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setAgeRange(option.value);
-                      setActiveDropdown(null);
-                    }}
-                    className={`w-full text-left px-3 py-2 text-[10px] sm:text-xs font-semibold hover:bg-slate-50 transition-colors flex justify-between items-center ${
-                      ageRange === option.value ? 'text-deep-maroon bg-deep-maroon/5 font-bold' : 'text-charcoal-text font-medium'
-                    }`}
-                  >
-                    <span>{option.label}</span>
-                    {ageRange === option.value && (
-                      <span className="material-symbols-outlined text-sm text-deep-maroon">check</span>
-                    )}
-                  </button>
-                ))}
+          {/* Age Between Dropdown */}
+          <div className="relative w-full text-left">
+            <label className="block text-[6.5px] sm:text-[9px] text-white/70 font-semibold leading-none mb-1 select-none uppercase tracking-wider">
+              Age Between
+            </label>
+            <div className="flex items-center gap-1.5 min-h-[34px] sm:min-h-[40px]">
+              <div className="relative w-full">
+                <select
+                  value={minAge || String(getMinAllowedAge(lookingFor))}
+                  onChange={(e) => setMinAge(e.target.value)}
+                  className="w-full border border-white/30 rounded-lg py-1 px-2 sm:py-1.5 sm:px-2.5 text-[10px] sm:text-xs bg-transparent hover:bg-white/10 transition-all text-white font-bold focus:outline-none focus:ring-1 focus:ring-white/40 cursor-pointer appearance-none h-[34px] sm:h-[40px]"
+                >
+                  <option value="" className="text-charcoal-text bg-white">Min Age</option>
+                  {Array.from({ length: 70 - getMinAllowedAge(lookingFor) + 1 }, (_, i) => i + getMinAllowedAge(lookingFor)).map(a => (
+                    <option key={a} value={a} className="text-charcoal-text bg-white">{a} Yrs</option>
+                  ))}
+                </select>
+                <span className="absolute right-1.5 sm:right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[11px] sm:text-[15px] text-white/80 pointer-events-none">
+                  keyboard_arrow_down
+                </span>
               </div>
-            )}
+              <span className="text-xs text-white/80 font-bold">-</span>
+              <div className="relative w-full">
+                <select
+                  value={maxAge}
+                  onChange={(e) => setMaxAge(e.target.value)}
+                  className="w-full border border-white/30 rounded-lg py-1 px-2 sm:py-1.5 sm:px-2.5 text-[10px] sm:text-xs bg-transparent hover:bg-white/10 transition-all text-white font-bold focus:outline-none focus:ring-1 focus:ring-white/40 cursor-pointer appearance-none h-[34px] sm:h-[40px]"
+                >
+                  <option value="" className="text-charcoal-text bg-white">Max Age</option>
+                  {Array.from({ length: 53 }, (_, i) => i + 18).map(a => (
+                    <option key={a} value={a} className="text-charcoal-text bg-white">{a} Yrs</option>
+                  ))}
+                </select>
+                <span className="absolute right-1.5 sm:right-2.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[11px] sm:text-[15px] text-white/80 pointer-events-none">
+                  keyboard_arrow_down
+                </span>
+              </div>
+            </div>
           </div>
 
         </div>

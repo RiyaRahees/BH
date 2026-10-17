@@ -8,14 +8,30 @@ export const getPartnerPreferences = async (req, res) => {
       return res.status(400).json({ error: 'Profile ID is required' });
     }
     
+    // Fetch user's gender
+    const [userRows] = await pool.query(
+      'SELECT gender, full_name, religion FROM user_registration WHERE LOWER(profile_id) = LOWER(?)',
+      [profileId]
+    );
+
+    const userGender = userRows.length > 0 ? userRows[0].gender : null;
+    const isMale = userGender && ['male', 'groom', 'man'].includes(String(userGender).trim().toLowerCase());
+    const minAllowedAge = isMale ? 18 : 20;
+    const partnerRole = isMale ? 'Bride' : 'Groom';
+
     const [preferences] = await pool.query(
       'SELECT * FROM partner_preference WHERE profile_id = ?',
       [profileId]
     );
     
+    let prefData = preferences.length > 0 ? preferences[0] : null;
+
     res.status(200).json({
       message: 'Partner preferences fetched successfully',
-      preferences: preferences.length > 0 ? preferences[0] : null
+      preferences: prefData,
+      user_gender: userGender,
+      min_allowed_age: minAllowedAge,
+      partner_type: partnerRole
     });
   } catch (error) {
      console.error('Error fetching partner preferences:', error);
@@ -32,9 +48,39 @@ export const updatePartnerPreferences = async (req, res) => {
       return res.status(400).json({ error: 'Profile ID is required' });
     }
 
+    // Fetch user gender to enforce legal and configured minimum age limits
+    const [userRows] = await pool.query(
+      'SELECT gender FROM user_registration WHERE LOWER(profile_id) = LOWER(?)',
+      [profileId]
+    );
+
+    const userGender = userRows.length > 0 ? userRows[0].gender : null;
+    const isMale = userGender && ['male', 'groom', 'man'].includes(String(userGender).trim().toLowerCase());
+    const minAllowedAge = isMale ? 18 : 20; // Male user seeks Bride (min 18); Female user seeks Groom (min 20)
+    const partnerRole = isMale ? 'Bride' : 'Groom';
+
+    let minAge = updateData.min_age !== undefined && updateData.min_age !== '' && updateData.min_age !== null 
+      ? parseInt(updateData.min_age, 10) 
+      : null;
+    let maxAge = updateData.max_age !== undefined && updateData.max_age !== '' && updateData.max_age !== null 
+      ? parseInt(updateData.max_age, 10) 
+      : null;
+
+    if (minAge !== null && !isNaN(minAge)) {
+      if (minAge < minAllowedAge) {
+        return res.status(400).json({ 
+          error: `Minimum age preference for ${partnerRole} cannot be less than ${minAllowedAge} years.` 
+        });
+      }
+    }
+
+    if (maxAge !== null && !isNaN(maxAge) && minAge !== null && !isNaN(minAge) && maxAge < minAge) {
+      return res.status(400).json({
+        error: `Maximum age cannot be less than Minimum age (${minAge} years).`
+      });
+    }
+
     const {
-      min_age,
-      max_age,
       min_height,
       max_height,
       marital_status,
@@ -71,8 +117,8 @@ export const updatePartnerPreferences = async (req, res) => {
         WHERE profile_id = ?
       `;
       await pool.query(updateQuery, [
-        min_age || null,
-        max_age || null,
+        minAge || null,
+        maxAge || null,
         min_height || null,
         max_height || null,
         marital_status || null,
@@ -104,8 +150,8 @@ export const updatePartnerPreferences = async (req, res) => {
       `;
       await pool.query(insertQuery, [
         profileId,
-        min_age || null,
-        max_age || null,
+        minAge || null,
+        maxAge || null,
         min_height || null,
         max_height || null,
         marital_status || null,

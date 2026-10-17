@@ -5,12 +5,14 @@ import {
   getStaffById,
   updateStaff,
   deleteStaff,
-  loginStaff
+  loginStaff,
+  forgotPasswordStaff
 } from '../../controllers/admin/staffController.js';
 
 const router = express.Router();
 
 router.post('/login', loginStaff);
+router.post('/forgot-password', forgotPasswordStaff);
 router.post('/', createStaff);
 router.get('/', getAllStaff);
 router.get('/:id', getStaffById);

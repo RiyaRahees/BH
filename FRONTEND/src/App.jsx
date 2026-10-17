@@ -13,12 +13,29 @@ import Packages from './pages/Packages';
 import ForgotPassword from './pages/ForgotPassword';
 import PasswordSent from './pages/PasswordSent';
 import Banned from './pages/Banned';
+import TermsPrivacy from './pages/TermsPrivacy';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import RefundPolicy from './pages/RefundPolicy';
+import Disclaimer from './pages/Disclaimer';
+import CyberSecurityPolicy from './pages/CyberSecurityPolicy';
+import SuccessStories from './pages/SuccessStories';
+import SafetyTips from './pages/SafetyTips';
 
 // Admin / Super Admin Page Imports
 import SuperAdminLogin from './admin/superAdmin/Login';
 import SuperAdminDashboard from './admin/superAdmin/DashBoard';
 import AdminLogin from './admin/admin/Login';
 import AdminDashboard from './admin/admin/Dashbord';
+
+// Franchise Page Imports
+import FranchiseLogin from './franchise/Login';
+import FranchiseRegister from './franchise/Register';
+import FranchiseVerification from './franchise/FranchiseVerification';
+import FranchiseDashboard from './franchise/Dashboard';
+import FranchiseTerms from './franchise/FranchiseTerms';
+
+import { useSettings } from './context/SettingsContext';
+import MaintenanceMode from '../components/MaintenanceMode';
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -48,6 +65,14 @@ function SuperAdminProtectedRoute({ children }) {
   return children;
 }
 
+function FranchiseProtectedRoute({ children }) {
+  const isFranchiseLoggedIn = localStorage.getItem('isFranchiseLoggedIn') === 'true';
+  if (!isFranchiseLoggedIn) {
+    return <Navigate to="/franchise/login" replace />;
+  }
+  return children;
+}
+
 function UserProtectedRoute({ children }) {
   const token = localStorage.getItem('accessToken');
   const user = localStorage.getItem('user');
@@ -60,39 +85,59 @@ function UserProtectedRoute({ children }) {
 
 function App() {
   const location = useLocation();
+  const { settings } = useSettings();
   const isAdminPath = location.pathname.startsWith('/super-admin') || location.pathname.startsWith('/admin');
+  const isFranchisePath = location.pathname.startsWith('/franchise');
 
-  /*
   useEffect(() => {
-    // Prevent right-click context menu
+    // Prevent right-click context menu on images
     const handleContextMenu = (e) => {
-      e.preventDefault();
+      if (e.target.tagName === 'IMG') {
+        e.preventDefault();
+      }
     };
 
-    // Prevent inspection and source view hotkeys
+    // Prevent inspection, save, and screenshot hotkeys
     const handleKeyDown = (e) => {
-      // F12
-      if (e.key === 'F12') {
+      // F10, F11, F12 (Common shortcut keys for screen capturing / dev tools)
+      if (['F10', 'F11', 'F12'].includes(e.key)) {
         e.preventDefault();
         return;
       }
       
       // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (Developer Tools / Console / Inspector)
-      if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
         e.preventDefault();
         return;
       }
       
-      // Ctrl+U (View Source)
-      if (e.ctrlKey && ['U', 'u'].includes(e.key)) {
+      // Ctrl+U / Cmd+U (View Source)
+      if ((e.ctrlKey || e.metaKey) && ['U', 'u'].includes(e.key)) {
         e.preventDefault();
         return;
       }
       
-      // Ctrl+S (Save Page)
-      if (e.ctrlKey && ['S', 's'].includes(e.key)) {
+      // Ctrl+S / Cmd+S (Save Page)
+      if ((e.ctrlKey || e.metaKey) && ['S', 's'].includes(e.key)) {
         e.preventDefault();
         return;
+      }
+
+      // Ctrl+P / Cmd+P (Print Page / Print to PDF)
+      if ((e.ctrlKey || e.metaKey) && ['P', 'p'].includes(e.key)) {
+        e.preventDefault();
+        return;
+      }
+
+      // PrintScreen key (Windows screenshot)
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        navigator.clipboard.writeText(''); // Clear clipboard as a deterrent
+        e.preventDefault();
+      }
+
+      // Mac screenshot shortcuts (Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5)
+      if (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) {
+        e.preventDefault();
       }
     };
 
@@ -113,7 +158,6 @@ function App() {
       document.removeEventListener('dragstart', handleDragStart);
     };
   }, []);
-  */
 
   const routeContent = (
     <>
@@ -132,8 +176,22 @@ function App() {
         <Route path="/muhurtham" element={<Muhurtham />} />
         <Route path='/contact-us' element={<Contact/>}/>
         <Route path='/packages' element={<Packages/>}/>
+        <Route path="/terms-privacy" element={<TermsPrivacy />} />
+        <Route path="/terms" element={<TermsPrivacy />} />
+        <Route path="/terms-of-use" element={<TermsPrivacy />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/refund" element={<RefundPolicy />} />
+        <Route path="/refund-and-cancellation" element={<RefundPolicy />} />
+        <Route path="/disclaimer" element={<Disclaimer />} />
+        <Route path="/cyber-security" element={<CyberSecurityPolicy />} />
+        <Route path="/security" element={<CyberSecurityPolicy />} />
+        <Route path="/success-stories" element={<SuccessStories />} />
+        <Route path="/safety-tips" element={<SafetyTips />} />
 
         {/* Super Admin Routes */}
+        <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
         <Route path="/super-admin/login" element={<SuperAdminLogin />} />
         <Route 
           path="/super-admin/dashboard" 
@@ -145,14 +203,46 @@ function App() {
         />
 
         {/* Standard Admin Routes */}
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+        {/* Franchise Partner Routes */}
+        <Route path="/franchise" element={<Navigate to="/franchise/dashboard" replace />} />
+        <Route path="/franchise/login" element={<FranchiseLogin />} />
+        <Route path="/franchise/register" element={<FranchiseRegister />} />
+        <Route path="/franchise/register/:token" element={<FranchiseRegister />} />
+        <Route path="/franchise/verification/:token" element={<FranchiseRegister />} />
+        <Route path="/franchise/terms" element={<FranchiseTerms />} />
+        <Route path="/franchise-terms" element={<FranchiseTerms />} />
+        <Route 
+          path="/franchise/dashboard" 
+          element={
+            <FranchiseProtectedRoute>
+              <FranchiseDashboard />
+            </FranchiseProtectedRoute>
+          } 
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
 
-  if (isAdminPath) {
+  if (isAdminPath || isFranchisePath) {
     return routeContent;
+  }
+
+  if (settings?.maintenanceMode) {
+    return (
+      <>
+        <MaintenanceMode />
+        <div className="opacity-0 pointer-events-none hidden">
+          {routeContent}
+        </div>
+      </>
+    );
   }
 
   return (

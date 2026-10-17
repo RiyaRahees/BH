@@ -6,15 +6,20 @@ const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
   { id: 'staff', label: 'Staff Management', icon: 'badge' },
   { id: 'users', label: 'Customer Management', icon: 'group' },
+  { id: 'marriage-requests', label: 'Marriage Requests', icon: 'favorite' },
+  { id: 'reports', label: 'Reported Profiles', icon: 'report' },
+  { id: 'contacts', label: 'General Enquiries', icon: 'mark_email_unread' },
   { id: 'packages', label: 'Packages & Pricing', icon: 'inventory_2' },
   { id: 'franchise', label: 'Franchise Management', icon: 'storefront' },
-  { id: 'head-franchise', label: 'Head Franchise', icon: 'domain' },
+  { id: 'franchise-requests', label: 'Franchise Requests', icon: 'handshake' },
+  { id: 'head-franchise', label: 'Pincode Allocation', icon: 'pin_drop' },
   {
     id: 'admin-panel',
     label: 'Admin Panel',
     icon: 'admin_panel_settings',
     children: [
       { id: 'payments', label: 'Payments & Revenue', icon: 'payments' },
+      { id: 'castes', label: 'Caste Management', icon: 'category' },
       { id: 'settings', label: 'System Settings', icon: 'settings' }
     ]
   }

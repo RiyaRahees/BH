@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
+import axiosInstance from '../src/utils/axiosInstance';
+import { getResolvedImageUrl, handleImageError } from '../src/utils/imageUtils';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -10,6 +12,7 @@ export default function Navbar() {
   const [activeState, setActiveState] = useState('Kerala');
   const [isMobileStateDropdownOpen, setIsMobileStateDropdownOpen] = useState(false);
   const [isDemoOpen, setIsDemoOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -30,14 +33,29 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    // If the user object from AuthContext is null, they are definitely logged out.
-    // Otherwise fallback to checking local storage (for initial render sync).
-    if (user) {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(localStorage.getItem('isLoggedIn') === 'true');
-    }
+    // If the user object from AuthContext exists, they are logged in.
+    setIsLoggedIn(Boolean(user));
   }, [location, user]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadCount(0);
+      return;
+    }
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await axiosInstance.get('/users/chats/conversations');
+        const dbChats = res.data.conversations || [];
+        const total = dbChats.reduce((sum, c) => sum + Number(c.unread || 0), 0);
+        setUnreadCount(total);
+      } catch (err) {
+        // Silent catch
+      }
+    };
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 5000);
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
 
   const handleLogout = () => {
     logout();
@@ -78,12 +96,11 @@ export default function Navbar() {
         <div className="flex justify-between items-center px-4 lg:px-6 xl:px-10 h-full max-w-container-max mx-auto w-full gap-1.5 sm:gap-4">
           {/* Left: Logo & State Dropdown */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center cursor-pointer relative h-12 sm:h-14 md:h-16">
+            <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center cursor-pointer relative h-9 sm:h-11 md:h-12">
               <img
-                src="/logo.png"
+                src={isSolid ? "/newlog2.png" : "/newlogo1.png"}
                 alt="Bharath Marriage"
-                className={`pt-2 h-12 sm:h-14 md:h-16 w-auto object-contain transition-all duration-300 ${!isSolid ? 'brightness-0 invert' : ''
-                  }`}
+                className={`h-9 sm:h-11 md:h-12 w-auto max-w-[180px] sm:max-w-[220px] md:max-w-[260px] object-contain transition-all duration-300 ${!isSolid ? 'brightness-0 invert' : ''}`}
               />
             </Link>
 
@@ -185,43 +202,42 @@ export default function Navbar() {
           </div>
 
           {/* Middle: Navigation Links (Desktop only) */}
-          <div className="hidden lg:flex lg:gap-3 xl:gap-5 items-center">
+          <div className="hidden lg:flex lg:gap-2.5 xl:gap-4 items-center shrink-0">
             <Link
-              className={`font-semibold text-xs xl:text-sm transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
+              className={`font-semibold text-xs xl:text-sm whitespace-nowrap transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
                 }`}
               to="/"
             >
               Home
             </Link>
             <Link
-              className={`font-semibold text-xs xl:text-sm transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
+              className={`font-semibold text-xs xl:text-sm whitespace-nowrap transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
                 }`}
               to="/packages"
             >
               Packages
             </Link>
             <Link
-              className={`font-semibold text-xs xl:text-sm transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
+              className={`font-semibold text-xs xl:text-sm whitespace-nowrap transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
                 }`}
               to="/porutham"
             >
               Porutham
             </Link>
             <Link
-              className={`font-semibold text-xs xl:text-sm transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
+              className={`font-semibold text-xs xl:text-sm whitespace-nowrap transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
                 }`}
               to="/muhurtham"
             >
               Muhurtham
             </Link>
             <a
-              className={`font-semibold text-xs xl:text-sm transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
+              className={`font-semibold text-xs xl:text-sm whitespace-nowrap transition-all duration-300 active:scale-95 ${isSolid ? 'text-charcoal-text hover:text-deep-maroon' : 'text-white/90 hover:text-white'
                 }`}
               href="/contact-us"
             >
               Contact Us
             </a>
-
           </div>
 
           {/* Right: Search, Login, Register & Hamburger */}
@@ -242,14 +258,20 @@ export default function Navbar() {
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  title={`${user?.full_name || 'Arjun Reddy'} (ID: ${user?.profile_id || 'BM1006'})`}
-                  className="flex items-center gap-1 rounded-full hover:bg-slate-100 md:px-1.5 md:py-0.5 cursor-pointer"
+                  title={`${user?.full_name || user?.email_address || 'Member'} ${user?.profile_id ? `(ID: ${user.profile_id})` : ''}`}
+                  className="flex items-center gap-1 rounded-full hover:bg-slate-100 md:px-1.5 md:py-0.5 cursor-pointer relative"
                 >
-                  <img
-                    src={user?.photo_1 || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ccc'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E"}
-                    alt="Logged in user"
-                    className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full object-cover border border-slate-200 bg-slate-50"
-                  />
+                  <div className="relative">
+                    <img
+                      src={getResolvedImageUrl(user?.photo_1, user?.gender)}
+                      alt="Logged in user"
+                      className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full object-cover border border-slate-200 bg-slate-50"
+                      onError={(e) => handleImageError(e, user?.gender)}
+                    />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                    )}
+                  </div>
                   <span className={`material-symbols-outlined hidden text-[20px] md:inline-block ${isSolid ? 'text-charcoal-text' : 'text-white'
                     }`}>
                     keyboard_arrow_down
@@ -261,8 +283,16 @@ export default function Navbar() {
                     <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
                     <div className="absolute right-0 mt-2.5 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 animate-fade-in text-left">
                       <div className="px-4 py-2 border-b border-slate-100 mb-1">
-                        <p className="text-xs font-bold text-charcoal-text">{user?.full_name || 'Arjun Reddy'}</p>
-                        <p className="text-[10px] text-soft-gray">ID: {user?.profile_id || 'BM1006'}</p>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-bold text-charcoal-text">{user?.full_name || user?.email_address || 'Member'}</p>
+                          {user?.plan?.toUpperCase() === 'DIAMOND' && (
+                            <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-900 text-[8px] font-bold px-1.5 py-0.5 rounded-full border border-amber-300" title="Diamond Premium Member">
+                              <span className="material-symbols-outlined text-[10px] text-amber-600">workspace_premium</span>
+                              Diamond
+                            </span>
+                          )}
+                        </div>
+                        {user?.profile_id && <p className="text-[10px] text-soft-gray">ID: {user.profile_id}</p>}
                       </div>
                       <Link
                         to="/dashboard"
@@ -271,6 +301,21 @@ export default function Navbar() {
                       >
                         <span className="material-symbols-outlined text-base">group</span>
                         Matches
+                      </Link>
+                      <Link
+                        to="/dashboard?tab=inbox"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center justify-between px-4 py-2 text-xs font-semibold text-charcoal-text hover:bg-slate-50 hover:text-deep-maroon"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-base">forum</span>
+                          Inbox Messages
+                        </span>
+                        {unreadCount > 0 && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full animate-pulse">
+                            {unreadCount}
+                          </span>
+                        )}
                       </Link>
                       <Link
                         to="/dashboard?tab=profile"
@@ -301,12 +346,12 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="hidden lg:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 {/* Register Free Button */}
                 <a
                   href="#register"
                   onClick={handleRegisterClick}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-deep-maroon hover:bg-primary text-white text-xs font-semibold rounded-lg shadow-md transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-deep-maroon hover:bg-primary text-white text-xs font-semibold rounded-lg shadow-md transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
                 >
                   <span className="material-symbols-outlined text-[16px] leading-none text-white">
                     person_add
@@ -317,13 +362,13 @@ export default function Navbar() {
                 {/* Login Button */}
                 <Link
                   to="/login"
-                  className={`flex items-center gap-1 px-3 py-1.5 font-semibold text-xs rounded-lg transition-all duration-200 active:scale-95 cursor-pointer shrink-0 border ${
+                  className={`flex items-center gap-1 px-3 py-1.5 font-semibold text-[11px] sm:text-xs rounded-lg transition-all duration-200 active:scale-95 cursor-pointer shrink-0 border ${
                     isSolid
                       ? 'border-deep-maroon text-deep-maroon hover:bg-deep-maroon/5'
                       : 'border-white text-white hover:bg-white/10'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[16px] leading-none">
+                  <span className="material-symbols-outlined text-[14px] sm:text-[16px] leading-none hidden sm:inline-block">
                     account_circle
                   </span>
                   Login
@@ -333,7 +378,7 @@ export default function Navbar() {
                 <button
                   onClick={() => setIsDemoOpen(true)}
                   title="Watch Demo"
-                  className={`flex items-center gap-1 pl-2 pr-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 cursor-pointer shrink-0 border ${
+                  className={`hidden lg:flex items-center gap-1 pl-2 pr-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all duration-200 active:scale-95 cursor-pointer shrink-0 border ${
                     isSolid
                       ? 'bg-heritage-gold/10 border-heritage-gold/40 text-heritage-gold hover:bg-heritage-gold/20'
                       : 'bg-white/10 border-white/30 text-white hover:bg-white/20'
@@ -379,7 +424,7 @@ export default function Navbar() {
             <div className="flex justify-between items-center p-4 border-b border-slate-100 shrink-0">
               <div className="h-12 relative w-40">
                 <img
-                  src="/logo.png"
+                  src="/newlog2.png"
                   alt="Bharath Marriage Logo"
                   className="h-full w-auto object-contain"
                 />

@@ -1,31 +1,98 @@
-import React, { useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useRef, useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import ProfileCard from '../ProfileCard';
 import { useAuth } from '../../src/context/AuthContext';
-
-import { useState, useEffect } from 'react';
 import axiosInstance from '../../src/utils/axiosInstance';
+import LoadingSpinner from '../LoadingSpinner';
+
 export default function MyHomeView() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const scrollContainerRef = useRef(null);
-  const [recommendedProfiles, setRecommendedProfiles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dailyRecommendations, setDailyRecommendations] = useState([]);
+  const [topMatches, setTopMatches] = useState([]);
+  const [loadingDaily, setLoadingDaily] = useState(true);
+  const [loadingTop, setLoadingTop] = useState(true);
+
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  const adSlides = [
+    {
+      id: 1,
+      badge: "🎉 365 DAYS FREE MEMBERSHIP",
+      title: "Enjoy 1 Full Year Free Access!",
+      subtitle: "Unlimited access to verified profiles, direct messaging & contact details for 365 days.",
+      ctaText: "Find Partner Now",
+      ctaLink: "/search",
+      bgGradient: "from-deep-maroon via-primary to-rose-950",
+      icon: "card_giftcard"
+    },
+    {
+      id: 2,
+      badge: "🔮 ASTRO MATCHMAKING",
+      title: "Calculate 10-Porutham Star Match",
+      subtitle: "Discover perfect horoscope compatibility ratings tailored for Kerala matrimony.",
+      ctaText: "Check Porutham",
+      ctaLink: "/porutham",
+      bgGradient: "from-purple-950 via-deep-maroon to-amber-950",
+      icon: "auto_awesome"
+    },
+    {
+      id: 3,
+      badge: "🛡️ 100% VERIFIED PROFILES",
+      title: "Trusted Kerala Matrimony Platform",
+      subtitle: `Welcome back, ${user?.full_name || 'Member'}! Connect with genuine Kerala families across all districts.`,
+      ctaText: "Explore Matches",
+      ctaLink: "/search",
+      bgGradient: "from-primary via-deep-maroon to-slate-950",
+      icon: "verified_user"
+    }
+  ];
 
   useEffect(() => {
-    const fetchRecommendations = async () => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % adSlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [adSlides.length]);
+
+  useEffect(() => {
+    const fetchDailyRecommendations = async () => {
       try {
-        const response = await axiosInstance.get('/users/recommendations');
+        const response = await axiosInstance.get('/users/daily-recommendations');
         if (response.data && response.data.profiles) {
-          setRecommendedProfiles(response.data.profiles);
+          const activeOnly = response.data.profiles.filter(p => {
+            const st = String(p.status || '').toUpperCase();
+            return !['DEACTIVATED', 'BANNED', 'FREEZED', 'BLOCKED', 'INACTIVE'].includes(st);
+          });
+          setDailyRecommendations(activeOnly);
         }
       } catch (error) {
-        console.error('Error fetching recommendations:', error);
+        console.error('Error fetching daily recommendations:', error);
       } finally {
-        setLoading(false);
+        setLoadingDaily(false);
       }
     };
 
-    fetchRecommendations();
+    const fetchTopMatches = async () => {
+      try {
+        const response = await axiosInstance.get('/users/top-matches');
+        if (response.data && response.data.profiles) {
+          const activeOnly = response.data.profiles.filter(p => {
+            const st = String(p.status || '').toUpperCase();
+            return !['DEACTIVATED', 'BANNED', 'FREEZED', 'BLOCKED', 'INACTIVE'].includes(st);
+          });
+          setTopMatches(activeOnly);
+        }
+      } catch (error) {
+        console.error('Error fetching top matches:', error);
+      } finally {
+        setLoadingTop(false);
+      }
+    };
+
+    fetchDailyRecommendations();
+    fetchTopMatches();
   }, []);
 
   const scroll = (direction) => {
@@ -39,21 +106,77 @@ export default function MyHomeView() {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 w-full">
-      {/* Header Greeting Banner Card with Indian Heritage Look */}
-      <section className="relative rounded-none md:rounded-xl overflow-hidden bg-gradient-to-r from-deep-maroon to-primary p-3.5 md:p-5 text-white shadow-none md:shadow-sm shrink-0">
-        <div className="absolute inset-0 opacity-10 hero-pattern pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3">
-          <div>
-            <span className="font-label-caps text-[8px] sm:text-[9px] text-heritage-gold tracking-widest block mb-0.5 font-bold uppercase">
-              Namaste, Welcome Back
-            </span>
-            <h1 className="font-headline-lg text-base sm:text-xl text-white font-bold">
-              {user?.full_name }
-            </h1>
+      {/* Compact High-End Advertisement Banner Carousel */}
+      <section className="relative rounded-2xl overflow-hidden shadow-sm shrink-0 border border-heritage-gold/25 group min-h-[96px] sm:min-h-[88px] flex flex-col justify-center">
+        {/* Animated Background Gradients & Glow Circles */}
+        <div className={`absolute inset-0 bg-gradient-to-r ${adSlides[activeSlide].bgGradient} transition-all duration-700 ease-in-out`}></div>
+        <div className="absolute inset-0 opacity-15 hero-pattern pointer-events-none"></div>
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-amber-500/20 rounded-full blur-2xl pointer-events-none"></div>
+
+        {/* Banner Main Content - Ultra Compact Height */}
+        <div className="relative z-10 py-2.5 px-3 sm:py-3 sm:px-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 h-full">
+          <div className="flex items-center gap-2.5 sm:gap-3 max-w-xl min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-heritage-gold text-base sm:text-lg">
+                {adSlides[activeSlide].icon}
+              </span>
+            </div>
+            <div className="flex flex-col justify-center min-w-0">
+              <span className="font-label-caps text-[7.5px] sm:text-[8.5px] text-heritage-gold tracking-widest block font-bold uppercase mb-0.5 truncate max-w-[220px] sm:max-w-none">
+                {adSlides[activeSlide].badge}
+              </span>
+              <h2 className="font-headline-lg text-[11px] sm:text-sm text-white font-bold leading-tight line-clamp-1 truncate">
+                {adSlides[activeSlide].title}
+              </h2>
+              {/* Hide second line subtitle on mobile to prevent height jump or cut-off */}
+              <p className="hidden sm:block font-body-lg text-[10.5px] text-white/85 leading-tight line-clamp-1 truncate mt-0.5">
+                {adSlides[activeSlide].subtitle}
+              </p>
+            </div>
           </div>
-          <p className="font-body-lg text-[10px] sm:text-xs text-white/80 max-w-sm sm:text-right">
-            Let's continue your search for the perfect life partner.
-          </p>
+
+          {/* Action CTA Button & Navigation Controls */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0 pt-0.5 sm:pt-0">
+            <Link
+              to={adSlides[activeSlide].ctaLink}
+              className="inline-flex items-center justify-center gap-1 bg-gradient-to-r from-heritage-gold via-amber-400 to-amber-500 hover:from-amber-400 hover:to-heritage-gold text-deep-maroon font-bold text-[9.5px] sm:text-xs py-1 px-3 sm:py-1.5 sm:px-4 rounded-full shadow hover:shadow-amber-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer uppercase tracking-wider group/btn shrink-0"
+            >
+              <span>{adSlides[activeSlide].ctaText}</span>
+              <span className="material-symbols-outlined text-[10px] sm:text-xs font-bold group-hover/btn:translate-x-0.5 transition-transform">arrow_forward</span>
+            </Link>
+
+            {/* Pagination & Next/Prev Controls */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setActiveSlide((prev) => (prev - 1 + adSlides.length) % adSlides.length)}
+                className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
+                title="Previous Slide"
+              >
+                ‹
+              </button>
+
+              <div className="flex items-center gap-1">
+                {adSlides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    onClick={() => setActiveSlide(index)}
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      activeSlide === index ? 'w-3.5 bg-heritage-gold' : 'w-1.5 bg-white/40 hover:bg-white/70'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              <button
+                onClick={() => setActiveSlide((prev) => (prev + 1) % adSlides.length)}
+                className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center text-[10px] transition-colors cursor-pointer"
+                title="Next Slide"
+              >
+                ›
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -68,38 +191,42 @@ export default function MyHomeView() {
 
         {/* Horizontal Scroll wrapper with overlay buttons */}
         <div className="relative group/scroll">
-          {/* Left Arrow Button */}
-          <button
-            onClick={() => scroll('left')}
-            className="absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/95 hover:bg-white text-slate-700 shadow-md border border-slate-150 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer duration-200"
-            title="Scroll Left"
-          >
-            <span className="material-symbols-outlined font-bold text-lg md:text-xl">chevron_left</span>
-          </button>
+          {(!loadingDaily && dailyRecommendations.length > 0) && (
+            <>
+              {/* Left Arrow Button */}
+              <button
+                onClick={() => scroll('left')}
+                className="absolute -left-2 md:-left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/95 hover:bg-white text-slate-700 shadow-md border border-slate-150 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer duration-200"
+                title="Scroll Left"
+              >
+                <span className="material-symbols-outlined font-bold text-lg md:text-xl">chevron_left</span>
+              </button>
 
-          {/* Right Arrow Button */}
-          <button
-            onClick={() => scroll('right')}
-            className="absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/95 hover:bg-white text-slate-700 shadow-md border border-slate-150 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer duration-200"
-            title="Scroll Right"
-          >
-            <span className="material-symbols-outlined font-bold text-lg md:text-xl">chevron_right</span>
-          </button>
+              {/* Right Arrow Button */}
+              <button
+                onClick={() => scroll('right')}
+                className="absolute -right-2 md:-right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/95 hover:bg-white text-slate-700 shadow-md border border-slate-150 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer duration-200"
+                title="Scroll Right"
+              >
+                <span className="material-symbols-outlined font-bold text-lg md:text-xl">chevron_right</span>
+              </button>
+            </>
+          )}
 
           <div
             ref={scrollContainerRef}
             className="flex gap-4 overflow-x-auto pb-2 scrollbar-hidden snap-x snap-mandatory scroll-smooth"
           >
-            {loading ? (
-              <div className="text-sm text-slate-500 py-4 px-2">Loading recommendations...</div>
-            ) : recommendedProfiles.length > 0 ? (
-              recommendedProfiles.map((profile) => (
+            {loadingDaily ? (
+              <LoadingSpinner text="Loading recommendations..." />
+            ) : dailyRecommendations.length > 0 ? (
+              dailyRecommendations.map((profile) => (
                 <div className="snap-start" key={profile.id}>
                   <ProfileCard profile={profile} compact />
                 </div>
               ))
             ) : (
-              <div className="text-sm text-slate-500 py-4 px-2">No recommendations available at the moment.</div>
+              <div className="text-sm text-slate-500 py-4 px-2 w-full text-center sm:text-left">No recommendations available at the moment.</div>
             )}
           </div>
         </div>
@@ -120,10 +247,10 @@ export default function MyHomeView() {
 
         {/* Grid layout going down */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 pt-2">
-          {loading ? (
-            <div className="col-span-full text-sm text-slate-500 py-4 px-2">Loading top matches...</div>
-          ) : recommendedProfiles.length > 0 ? (
-            recommendedProfiles.slice(0, 5).map((profile, index) => (
+          {loadingTop ? (
+            <div className="col-span-full"><LoadingSpinner text="Loading top matches..." /></div>
+          ) : topMatches.length > 0 ? (
+            topMatches.slice(0, 6).map((profile, index) => (
               <ProfileCard key={`${profile.id}-${index}`} profile={profile} fullWidth />
             ))
           ) : (

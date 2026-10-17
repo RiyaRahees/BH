@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
+import { useSettings } from '../../context/SettingsContext';
+import axiosInstance from '../../utils/axiosInstance';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
 export default function SystemSetting() {
+  const toast = useToast();
+  const { refreshSettings } = useSettings();
   const [activeTab, setActiveTab] = useState('general'); // 'general', 'limits', 'security'
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   
-  // Settings States
-  const [settings, setSettings] = useState({
+  const defaultSettingsState = {
     siteName: "Bharath Marriage",
     supportEmail: "support@bharathmarriage.com",
     contactPhone: "+91 98450 12345",
@@ -16,7 +23,34 @@ export default function SystemSetting() {
     sessionExpiry: 60, // minutes
     enableCaptcha: true,
     maintenanceMode: false
-  });
+  };
+  
+  // Settings States
+  const [settings, setSettings] = useState(defaultSettingsState);
+  const [initialSettings, setInitialSettings] = useState(defaultSettingsState);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get('/admin/settings');
+        if (response.data && response.data.settings) {
+          const mergedSettings = {
+            ...defaultSettingsState,
+            ...response.data.settings
+          };
+          setSettings(mergedSettings);
+          setInitialSettings(mergedSettings);
+        }
+      } catch (error) {
+        console.error('Error loading system settings:', error);
+        toast.error('Failed to load system settings from server.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleChange = (field, value) => {
     setSettings(prev => ({
@@ -25,10 +59,60 @@ export default function SystemSetting() {
     }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert("Website configurations and settings saved successfully!");
+
+    const brideAgeNum = parseInt(settings.minBrideAge, 10);
+    const groomAgeNum = parseInt(settings.minGroomAge, 10);
+
+    if (isNaN(brideAgeNum) || brideAgeNum < 18) {
+      toast.error('Minimum age limit for Bride cannot be less than 18 years.');
+      return;
+    }
+
+    if (isNaN(groomAgeNum) || groomAgeNum < 18) {
+      toast.error('Minimum age limit for Groom cannot be less than 18 years.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...settings,
+        minBrideAge: brideAgeNum,
+        minGroomAge: groomAgeNum,
+        maxPhotos: parseInt(settings.maxPhotos, 10) || 5,
+        sessionExpiry: parseInt(settings.sessionExpiry, 10) || 60
+      };
+
+      const response = await axiosInstance.put('/admin/settings', payload);
+      if (response.data && response.data.settings) {
+        const mergedSettings = {
+          ...defaultSettingsState,
+          ...response.data.settings
+        };
+        setSettings(mergedSettings);
+        setInitialSettings(mergedSettings);
+      }
+      refreshSettings();
+      toast.success(response.data?.message || "Website configurations and settings saved successfully!");
+    } catch (error) {
+      console.error('Error saving system settings:', error);
+      toast.error(error.response?.data?.error || "Failed to save settings. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
+
+  if (loading) {
+    return (
+      <div className="py-12 flex justify-center items-center">
+        <LoadingSpinner text="Loading system settings..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-left">
@@ -46,46 +130,48 @@ export default function SystemSetting() {
       {/* Tabs list */}
       <div className="flex border-b border-slate-200 text-xs font-bold text-slate-500 gap-4">
         <button
+          type="button"
           onClick={() => setActiveTab('general')}
-          className={`pb-2.5 px-1 cursor-pointer transition-all border-b-2 ${
-            activeTab === 'general' 
-              ? 'border-deep-maroon text-deep-maroon' 
-              : 'border-transparent hover:text-slate-750'
+          className={`pb-2 transition-colors cursor-pointer ${
+            activeTab === 'general'
+              ? 'border-b-2 border-deep-maroon text-deep-maroon'
+              : 'hover:text-slate-700'
           }`}
         >
           General Settings
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('limits')}
-          className={`pb-2.5 px-1 cursor-pointer transition-all border-b-2 ${
-            activeTab === 'limits' 
-              ? 'border-deep-maroon text-deep-maroon' 
-              : 'border-transparent hover:text-slate-750'
+          className={`pb-2 transition-colors cursor-pointer ${
+            activeTab === 'limits'
+              ? 'border-b-2 border-deep-maroon text-deep-maroon'
+              : 'hover:text-slate-700'
           }`}
         >
           Matrimonial Limits
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('security')}
-          className={`pb-2.5 px-1 cursor-pointer transition-all border-b-2 ${
-            activeTab === 'security' 
-              ? 'border-deep-maroon text-deep-maroon' 
-              : 'border-transparent hover:text-slate-750'
+          className={`pb-2 transition-colors cursor-pointer ${
+            activeTab === 'security'
+              ? 'border-b-2 border-deep-maroon text-deep-maroon'
+              : 'hover:text-slate-700'
           }`}
         >
           Security & Maintenance
         </button>
       </div>
 
-      {/* Form Card */}
-      <form onSubmit={handleSave} className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-xs max-w-2xl">
-        <div className="text-xs font-semibold text-slate-700 space-y-5">
-          
+      {/* Settings Form Body */}
+      <form onSubmit={handleSave} className="space-y-6">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
           {/* General Tab */}
           {activeTab === 'general' && (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase text-slate-450 font-bold">Website Title</label>
+                <label className="text-[10px] uppercase text-slate-450 font-bold">Website Name</label>
                 <input
                   type="text"
                   value={settings.siteName}
@@ -132,31 +218,81 @@ export default function SystemSetting() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase text-slate-455 font-bold">Min Age Limit (Bride)</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] uppercase text-slate-500 font-bold">Min Age Limit (Bride)</label>
+                    <span className="text-[9.5px] font-semibold text-slate-400">Min. 18 years</span>
+                  </div>
                   <input
                     type="number"
+                    min="18"
+                    max="100"
                     value={settings.minBrideAge}
-                    onChange={(e) => handleChange('minBrideAge', parseInt(e.target.value) || 18)}
-                    className="w-full border border-slate-200 rounded-lg p-2 font-medium bg-slate-50/50 focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:bg-white"
+                    onChange={(e) => handleChange('minBrideAge', e.target.value)}
+                    onBlur={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (isNaN(val) || val < 18) {
+                        handleChange('minBrideAge', 18);
+                      }
+                    }}
+                    className={`w-full border rounded-lg p-2 font-medium bg-slate-50/50 focus:outline-none focus:bg-white transition-colors ${
+                      settings.minBrideAge !== '' && parseInt(settings.minBrideAge, 10) < 18
+                        ? 'border-rose-400 focus:ring-1 focus:ring-rose-400 text-rose-700 bg-rose-50/20'
+                        : 'border-slate-200 focus:ring-1 focus:ring-deep-maroon'
+                    }`}
                   />
+                  {settings.minBrideAge !== '' && parseInt(settings.minBrideAge, 10) < 18 && (
+                    <p className="text-[10px] font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      Bride minimum age cannot be less than 18 years
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] uppercase text-slate-455 font-bold">Min Age Limit (Groom)</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] uppercase text-slate-500 font-bold">Min Age Limit (Groom)</label>
+                    <span className="text-[9.5px] font-semibold text-slate-400">Min. 18 years</span>
+                  </div>
                   <input
                     type="number"
+                    min="18"
+                    max="100"
                     value={settings.minGroomAge}
-                    onChange={(e) => handleChange('minGroomAge', parseInt(e.target.value) || 21)}
-                    className="w-full border border-slate-200 rounded-lg p-2 font-medium bg-slate-50/50 focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:bg-white"
+                    onChange={(e) => handleChange('minGroomAge', e.target.value)}
+                    onBlur={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (isNaN(val) || val < 18) {
+                        handleChange('minGroomAge', 21);
+                      }
+                    }}
+                    className={`w-full border rounded-lg p-2 font-medium bg-slate-50/50 focus:outline-none focus:bg-white transition-colors ${
+                      settings.minGroomAge !== '' && parseInt(settings.minGroomAge, 10) < 18
+                        ? 'border-rose-400 focus:ring-1 focus:ring-rose-400 text-rose-700 bg-rose-50/20'
+                        : 'border-slate-200 focus:ring-1 focus:ring-deep-maroon'
+                    }`}
                   />
+                  {settings.minGroomAge !== '' && parseInt(settings.minGroomAge, 10) < 18 && (
+                    <p className="text-[10px] font-semibold text-rose-600 flex items-center gap-1 mt-1">
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      Groom minimum age cannot be less than 18 years
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase text-slate-455 font-bold">Max Photos Upload Limit</label>
+                <label className="text-[10px] uppercase text-slate-500 font-bold">Max Photos Upload Limit</label>
                 <input
                   type="number"
+                  min="1"
+                  max="10"
                   value={settings.maxPhotos}
-                  onChange={(e) => handleChange('maxPhotos', parseInt(e.target.value) || 1)}
+                  onChange={(e) => handleChange('maxPhotos', e.target.value)}
+                  onBlur={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (isNaN(val) || val < 1) {
+                      handleChange('maxPhotos', 4);
+                    }
+                  }}
                   className="w-full border border-slate-200 rounded-lg p-2 font-medium bg-slate-50/50 focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:bg-white"
                 />
               </div>
@@ -195,24 +331,7 @@ export default function SystemSetting() {
                 />
               </div>
 
-              {/* Toggles */}
-              <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/50">
-                <div>
-                  <span className="font-bold text-slate-700 block">Enable Google Captcha</span>
-                  <span className="text-[10px] text-slate-400 font-medium">Show captcha validation on signup and logins.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleChange('enableCaptcha', !settings.enableCaptcha)}
-                  className={`w-10 h-5 rounded-full p-0.5 transition-colors cursor-pointer ${
-                    settings.enableCaptcha ? 'bg-deep-maroon' : 'bg-slate-300'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                    settings.enableCaptcha ? 'translate-x-5' : 'translate-x-0'
-                  }`}></div>
-                </button>
-              </div>
+
 
               {/* Maintenance Mode */}
               <div className="flex items-center justify-between p-3 rounded-xl border border-rose-100 bg-rose-50/20">
@@ -239,10 +358,17 @@ export default function SystemSetting() {
           <div className="pt-4 border-t border-slate-100 flex justify-end">
             <button
               type="submit"
-              className="px-5 py-2 bg-deep-maroon hover:bg-primary text-white rounded-xl font-bold cursor-pointer shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+              disabled={isSaving || !hasChanges}
+              className={`px-5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-md ${
+                isSaving || !hasChanges
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'
+                  : 'bg-deep-maroon hover:bg-primary text-white cursor-pointer active:scale-95'
+              }`}
             >
-              <span className="material-symbols-outlined text-sm">save</span>
-              Save Settings
+              <span className={`material-symbols-outlined text-sm ${isSaving ? 'animate-spin' : ''}`}>
+                {isSaving ? 'refresh' : 'save'}
+              </span>
+              {isSaving ? 'Saving...' : 'Save Settings'}
             </button>
           </div>
 

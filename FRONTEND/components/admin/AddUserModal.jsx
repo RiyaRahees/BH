@@ -1,21 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axiosInstance from '../../src/utils/axiosInstance';
+import { useSettings } from '../../src/context/SettingsContext';
+import { useToast } from '../../src/context/ToastContext';
+import { COUNTRY_CODES } from '../../src/utils/countryCodes';
+
+const defaultCastes = {
+  Hindu: [
+    'Nair', 'Ezhava', 'Brahmin', 'Viswakarma', 'Dheevara', 'Thiyya', 'Kshatriya', 
+    'Ambalavasi', 'Veluthedathu Nair', 'Vilakkithala Nair', 'Ganaka', 'Vaniyan', 
+    'Kudumbi', 'Pulaya', 'Cheramar', 'Sambava', 'Vettuvan', 'SC / ST', 'General / Other'
+  ],
+  Christian: [
+    'Roman Catholic', 'Latin Catholic', 'Syrian Catholic', 'Jacobite', 'Orthodox', 
+    'Marthoma', 'CSI', 'Pentecost', 'Knanaya Catholic', 'Knanaya Jacobite', 'General / Other'
+  ],
+  Muslim: [
+    'Sunni', 'Mujahid', 'Shafi', 'Hanafi', 'Jamaat-e-Islami', 'Thangal', 'General / Other'
+  ],
+  Other: ['General / Open to all', 'Other']
+};
 
 export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
+  const { settings } = useSettings();
   const [newUserData, setNewUserData] = useState({
     fullName: '',
-    countryCode: 'IN +91',
+    countryCode: '+91',
     mobileNumber: '',
     email: '',
     district: '',
     religion: '',
+    caste: '',
     dobDay: '',
     dobMonth: '',
     dobYear: '',
-    gender: '',
+    gender: 'Male',
     terms: false
   });
   const [showDobPicker, setShowDobPicker] = useState(false);
+
+  const minBrideAge = settings?.minBrideAge || 18;
+  const minGroomAge = settings?.minGroomAge || 21;
+  const minRequiredAge = newUserData.gender === 'Female' ? minBrideAge : minGroomAge;
+
+  const currentYear = new Date().getFullYear();
+  const maxAllowedYear = currentYear - minRequiredAge;
+
+  const selectableYears = useMemo(() => {
+    return Array.from({ length: 65 }, (_, i) => maxAllowedYear - i);
+  }, [maxAllowedYear]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -27,21 +59,63 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
         email: '',
         district: '',
         religion: '',
+        caste: '',
         dobDay: '',
         dobMonth: '',
         dobYear: '',
-        gender: '',
+        gender: 'Male',
         terms: false
       });
       setShowDobPicker(false);
     }
   }, [isOpen]);
 
+  // Clear year if it exceeds maxAllowedYear on gender toggle
+  useEffect(() => {
+    if (newUserData.dobYear && parseInt(newUserData.dobYear) > maxAllowedYear) {
+      setNewUserData(prev => ({ ...prev, dobYear: '' }));
+    }
+  }, [newUserData.gender, maxAllowedYear]);
+
+  const allCastes = useMemo(() => {
+    if (!newUserData.religion) return [];
+    if (defaultCastes[newUserData.religion]) return defaultCastes[newUserData.religion];
+    if (newUserData.religion === 'Others' || newUserData.religion === 'Other') return defaultCastes.Other;
+    return [];
+  }, [newUserData.religion]);
+
+  // Reset caste if religion changes
+  useEffect(() => {
+    setNewUserData(prev => ({ ...prev, caste: '' }));
+  }, [newUserData.religion]);
+
+  const calculateAge = (day, month, year) => {
+    if (!day || !month || !year) return null;
+    const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+    const mIdx = months[month];
+    if (mIdx === undefined) return null;
+    const birthDate = new Date(parseInt(year), mIdx, parseInt(day));
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const mDiff = today.getMonth() - birthDate.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       if (!newUserData.dobDay || !newUserData.dobMonth || !newUserData.dobYear) {
         onError('Please select Date of Birth');
+        return;
+      }
+
+      const userAge = calculateAge(newUserData.dobDay, newUserData.dobMonth, newUserData.dobYear);
+      if (userAge !== null && userAge < minRequiredAge) {
+        const role = newUserData.gender === 'Female' ? 'Bride' : 'Groom';
+        onError(`Minimum age limit for ${role} is ${minRequiredAge} years. (Selected age: ${userAge} yrs)`);
         return;
       }
       
@@ -56,6 +130,7 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
         mobile_number: newUserData.mobileNumber,
         email_address: newUserData.email,
         religion: newUserData.religion,
+        caste: newUserData.caste,
         district: newUserData.district,
         dob: dobString,
         gender: newUserData.gender
@@ -115,10 +190,9 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
               onChange={(e) => setNewUserData({ ...newUserData, countryCode: e.target.value })}
               className="w-1/3 border border-surface-variant rounded-xl py-2 px-3 text-xs bg-white text-charcoal-text focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:border-deep-maroon"
             >
-              <option value="IN +91">IN +91</option>
-              <option value="US +1">US +1</option>
-              <option value="UK +44">UK +44</option>
-              <option value="AE +971">AE +971</option>
+              {COUNTRY_CODES.map((c) => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
             </select>
             <input
               type="tel"
@@ -176,8 +250,21 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
               <option value="Christian">Christian</option>
               <option value="Other">Other</option>
             </select>
-            <div className="w-1/2 relative">
-              <button
+            <select
+              value={newUserData.caste}
+              onChange={(e) => setNewUserData({ ...newUserData, caste: e.target.value })}
+              className={`w-1/2 border border-surface-variant rounded-xl py-2 px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-deep-maroon focus:border-deep-maroon ${newUserData.caste ? 'text-charcoal-text' : 'text-slate-400'}`}
+              disabled={!newUserData.religion}
+              required
+            >
+              <option value="" disabled hidden>{newUserData.religion ? "Caste" : "Select Religion First"}</option>
+              {allCastes.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-full relative">
+            <button
                 type="button"
                 onClick={() => setShowDobPicker(!showDobPicker)}
                 className={`w-full flex items-center justify-between gap-1 border rounded-xl py-2 px-3 text-xs bg-white text-charcoal-text hover:bg-slate-50 cursor-pointer h-full min-h-[38px] ${
@@ -201,7 +288,7 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowDobPicker(false)}></div>
                   <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200/80 shadow-xl rounded-xl p-3.5 w-[250px] animate-fade-in text-left">
-                    <div className="text-[11px] font-semibold text-charcoal-text mb-2 flex justify-between items-center">
+                    <div className="text-[11px] font-semibold text-charcoal-text mb-1 flex justify-between items-center">
                       <span>Select Date of Birth</span>
                       <button
                         type="button"
@@ -210,6 +297,12 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
                       >
                         ✕
                       </button>
+                    </div>
+
+                    <div className="mb-2">
+                      <span className="text-[9.5px] font-bold text-deep-maroon bg-deep-maroon/10 px-2 py-0.5 rounded inline-block">
+                        Min Age for {newUserData.gender === 'Female' ? 'Bride' : 'Groom'}: {minRequiredAge} yrs
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-1.5 mb-3">
@@ -244,7 +337,7 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
                         className="w-full border border-slate-200 rounded-md py-1 px-1.5 text-[10px] bg-slate-50 text-charcoal-text focus:outline-none focus:ring-1 focus:ring-deep-maroon"
                       >
                         <option value="">Year</option>
-                        {Array.from({ length: 58 }, (_, i) => new Date().getFullYear() - 18 - i).map((y) => (
+                        {selectableYears.map((y) => (
                           <option key={y} value={y}>{y}</option>
                         ))}
                       </select>
@@ -262,7 +355,6 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
                 </>
               )}
             </div>
-          </div>
 
           <div className="flex gap-2 mt-2">
             <label className={`w-1/2 flex items-center justify-center gap-2 py-2.5 rounded-xl border cursor-pointer select-none transition-colors ${
@@ -311,7 +403,16 @@ export default function AddUserModal({ isOpen, onClose, onSuccess, onError }) {
               required
             />
             <label htmlFor="terms" className="text-[10px] text-slate-500 select-none">
-              I have read and agree to the <span className="font-bold text-slate-700">Terms of Use & Privacy Policy</span>
+              I have read and agree to the{' '}
+              <a
+                href="/terms-privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="font-bold text-deep-maroon hover:underline cursor-pointer"
+              >
+                Terms of Use &amp; Privacy Policy
+              </a>
             </label>
           </div>
 

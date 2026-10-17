@@ -24,7 +24,7 @@ export default function Home() {
   useEffect(() => {
     const fetchHighlighted = async () => {
       try {
-        const response = await axiosInstance.get('/users/recommendations');
+        const response = await axiosInstance.get('/users/highlighted-profiles');
         if (response.data && response.data.profiles) {
           setHighlightedProfiles(response.data.profiles);
         }
@@ -180,7 +180,7 @@ export default function Home() {
               <span className="text-heritage-gold">One Beautiful Journey</span>
             </h1>
             <p className="text-white/90 font-body-lg text-[10px] sm:text-sm md:text-base mb-3 sm:mb-8 text-center max-w-xl mx-auto font-medium text-shadow-premium">
-              Discover verified profiles and genuine Malayali families
+              Discover verified profiles and genuine malayali families
             </p>
 
             {/* Premium Glassmorphism Search Bar Component */}
@@ -239,7 +239,7 @@ export default function Home() {
             >
               {highlightedProfiles.map((profile, index) => (
                 <div
-                  className="w-[210px] sm:w-[270px] shrink-0 snap-start"
+                  className="w-[220px] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] shrink-0 snap-start"
                   key={profile.id}
                   style={profilesVisible ? { animationDelay: `${index * 80}ms` } : {}}
                 >
@@ -290,18 +290,18 @@ export default function Home() {
               <div className={`col-span-2 sm:col-span-1 sm:row-span-2 bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden flex flex-col h-[350px] sm:h-[420px] hover:shadow-lg transition-all duration-300 ${storiesVisible ? 'animate-slide-from-left' : 'opacity-0'
                 }`}>
                 <div className="relative flex-1 overflow-hidden">
-                  <img src="/image1.jpg" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" alt="Anjali & Arun" />
+                  <img src="/photo1.png" className="w-full h-full object-cover transition-all duration-500" alt="Anjali & Arun" />
                   <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-deep-maroon text-white text-[9px] sm:text-[10px] font-label-caps font-semibold py-1 px-2.5 rounded-full tracking-wider shadow-md">
                     Featured Story
                   </div>
                 </div>
                 <div className="p-3 sm:p-4 text-center bg-white border-t border-slate-50 shrink-0">
                   <h4 className="font-bold text-charcoal-text text-sm sm:text-base">Anjali &amp; Arun</h4>
-                  <p className="text-[10px] sm:text-xs text-soft-gray italic mt-1">Destination : bangalore</p>
+                  <p className="text-[10px] sm:text-xs text-soft-gray italic mt-1">Destination : Bangalore</p>
                 </div>
               </div>
 
-              {/* Card 2: Dhanya & Midhun - Top Right Card */}
+              {/* Card 2: Fathima & Farhan (Muslim Wedding) - Top Right Card */}
               <div className={`col-span-1 bg-white rounded-xl shadow-md border border-slate-100/80 overflow-hidden flex flex-col h-[220px] sm:h-[198px] hover:shadow-lg transition-all duration-300 ${storiesVisible ? 'animate-slide-from-top' : 'opacity-0'
                 }`}>
                 <div className="relative h-[145px] sm:h-[130px] w-full flex items-center justify-center bg-white p-3 shrink-0">
@@ -323,34 +323,34 @@ export default function Home() {
                   {/* Portrait Frame */}
                   <div className="relative w-[72%] h-full rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-slate-50 shrink-0">
                     <img
-                      src="/image2.jpg"
-                      className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                      alt="Dhanya & Midhun"
+                      src="/image2.png"
+                      className="w-full h-full object-cover transition-all duration-500"
+                      alt="Fathima & Farhan"
                     />
                   </div>
                 </div>
                 <div className="p-2 sm:p-3 text-center bg-white border-t border-slate-50 shrink-0 flex-1 flex flex-col justify-center">
-                  <h4 className="font-bold text-charcoal-text text-[11px] sm:text-xs leading-none">Dhanya &amp; Midhun</h4>
+                  <h4 className="font-bold text-charcoal-text text-[11px] sm:text-xs leading-none">Fathima &amp; Farhan</h4>
                   <p className="text-[9px] sm:text-[10px] text-soft-gray italic mt-1 leading-none">Destination : Kochi</p>
                 </div>
               </div>
 
-              {/* Card 3: Devika & Sreejith - Bottom Right Card */}
+              {/* Card 3: Merin & Thomas (Christian Wedding) - Bottom Right Card */}
               <div className={`col-span-1 bg-white rounded-xl shadow-md border border-slate-100/80 overflow-hidden flex flex-col h-[220px] sm:h-[198px] hover:shadow-lg transition-all duration-300 ${storiesVisible ? 'animate-slide-from-bottom' : 'opacity-0'
                 }`}>
                 <div className="relative h-[145px] sm:h-[130px] w-full flex items-center justify-center bg-white p-3.5 shrink-0">
                   {/* Taller Rounded Frame */}
                   <div className="relative w-[92%] h-full rounded-2xl overflow-hidden shadow-sm bg-slate-50 shrink-0">
                     <img
-                      src="/image3.jpg"
-                      className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                      alt="Devika & Sreejith"
+                      src="/image3.png"
+                      className="w-full h-full object-cover transition-all duration-500"
+                      alt="Merin & Thomas"
                     />
                   </div>
                 </div>
                 <div className="p-2 sm:p-3 text-center bg-white border-t border-slate-50 shrink-0 flex-1 flex flex-col justify-center">
-                  <h4 className="font-bold text-charcoal-text text-[11px] sm:text-xs leading-none">Devika &amp; Sreejith</h4>
-                  <p className="text-[9px] sm:text-[10px] text-soft-gray italic mt-1 leading-none">Destination : Thrissur</p>
+                  <h4 className="font-bold text-charcoal-text text-[11px] sm:text-xs leading-none">Merin &amp; Thomas</h4>
+                  <p className="text-[9px] sm:text-[10px] text-soft-gray italic mt-1 leading-none">Destination : Kottayam</p>
                 </div>
               </div>    </div>
 
@@ -362,7 +362,7 @@ export default function Home() {
       <section ref={registerRef} className="bg-slate-50 py-16 sm:py-20 relative z-10 border-t border-b border-slate-100">
         <div className="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
+
             {/* Left side: Copy and Value Propositions */}
             <div className={`lg:col-span-6 space-y-6 text-left transition-all duration-700 ${registerVisible ? 'animate-slide-from-left' : 'opacity-0'}`}>
               <span className="font-label-caps text-xs text-heritage-gold tracking-widest block mb-1 font-semibold uppercase">
@@ -375,7 +375,7 @@ export default function Home() {
               <p className="font-body-lg text-sm sm:text-base text-soft-gray leading-relaxed max-w-xl">
                 Creating your profile is completely free, quick, and secure. Join thousands of Malayali families who trust Bharath Marriage for finding compatible, verified lifepartners.
               </p>
-              
+
               {/* Trust Indicators / Checklist */}
               <div className="space-y-3.5 pt-4">
                 <div className="flex items-center gap-3">
