@@ -76,6 +76,7 @@ export default function Footer() {
             <li><Link className="text-slate-400 hover:text-heritage-gold text-[11px] transition-colors" to="/safety-tips">Safety Tips</Link></li>
             <li><Link className="text-slate-400 hover:text-heritage-gold text-[11px] transition-colors" to="/search">Find Matches</Link></li>
             <li><Link className="text-slate-400 hover:text-heritage-gold text-[11px] transition-colors" to="/packages">Membership Plans</Link></li>
+            <li><Link className="text-slate-400 hover:text-heritage-gold text-[11px] italic transition-colors" to="/advertise">Advertise With Us</Link></li>
           </ul>
         </div>
         
