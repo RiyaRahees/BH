@@ -1,9 +1,13 @@
 /**
  * Static Ads Dataset & Configuration
  * Provides mock ads for Kerala Matrimony vendors and defines the 3 ad tiers.
+ *
+ * Ad tier pricing is editable by the Super Admin via the Ads Management panel.
+ * Edits are persisted in localStorage and reflected across all consuming views.
  */
 
-export const AD_TIERS = {
+// ─── Default / fallback ad tier definitions ─────────────────────────────────
+export const INITIAL_AD_TIERS = {
   LEADERBOARD: {
     id: 'LEADERBOARD',
     name: 'Top Leaderboard Banner',
@@ -39,6 +43,60 @@ export const AD_TIERS = {
   }
 };
 
+// ─── Dynamic tier helpers (persisted by Super Admin) ─────────────────────────
+const LOCAL_STORAGE_TIERS_KEY = 'bh_ad_tiers_data';
+
+/**
+ * Returns the current ad tier config – either the Super Admin's saved version
+ * (from localStorage) or the hardcoded defaults above.
+ */
+export const getStoredAdTiers = () => {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_TIERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Merge with defaults to guarantee all required keys exist
+      const merged = {};
+      Object.keys(INITIAL_AD_TIERS).forEach((key) => {
+        merged[key] = { ...INITIAL_AD_TIERS[key], ...(parsed[key] || {}) };
+      });
+      return merged;
+    }
+  } catch (e) {
+    console.error('Error loading stored ad tiers:', e);
+  }
+  return INITIAL_AD_TIERS;
+};
+
+/**
+ * Persists updated tier config to localStorage and fires a storage sync event
+ * so any open tab or component can react immediately.
+ */
+export const saveStoredAdTiers = (updatedTiers) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_TIERS_KEY, JSON.stringify(updatedTiers));
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.error('Error saving ad tiers:', e);
+  }
+};
+
+/**
+ * Resets tier pricing to factory defaults and clears the localStorage override.
+ */
+export const resetAdTiersToDefaults = () => {
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_TIERS_KEY);
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {
+    console.error('Error resetting ad tiers:', e);
+  }
+};
+
+// ─── Backward-compatible static export (used in AdBanner, AdvertiseWithUs etc)
+// NOTE: Consumers that need live/updated pricing should call getStoredAdTiers().
+export const AD_TIERS = INITIAL_AD_TIERS;
+
 export const INITIAL_STATIC_ADS = [
   // ── Leaderboard Ads ──
   {
@@ -62,7 +120,10 @@ export const INITIAL_STATIC_ADS = [
     duration: '1 Month',
     amount: 4999,
     requestedAt: '2026-10-15T09:30:00Z',
-    creativeUrl: '/ad_jewellery.jpg'
+    creativeUrl: '/ad_jewellery.jpg',
+    clicks: 1248,
+    impressions: 28450,
+    ctr: '4.39%'
   },
   {
     id: 'ad-leader-02',
@@ -85,7 +146,10 @@ export const INITIAL_STATIC_ADS = [
     duration: '3 Months',
     amount: 12749,
     requestedAt: '2026-10-14T14:15:00Z',
-    creativeUrl: '/ad_mandapam.jpg'
+    creativeUrl: '/ad_mandapam.jpg',
+    clicks: 2894,
+    impressions: 64200,
+    ctr: '4.51%'
   },
 
   // ── In-Feed Match Cards (Injected in user profile grids) ──
@@ -110,7 +174,10 @@ export const INITIAL_STATIC_ADS = [
     duration: '1 Month',
     amount: 3499,
     requestedAt: '2026-10-16T11:00:00Z',
-    creativeUrl: '/ad_saree.jpg'
+    creativeUrl: '/ad_saree.jpg',
+    clicks: 1872,
+    impressions: 39500,
+    ctr: '4.74%'
   },
   {
     id: 'ad-card-02',
@@ -133,7 +200,10 @@ export const INITIAL_STATIC_ADS = [
     duration: '1 Month',
     amount: 3499,
     requestedAt: '2026-10-16T16:20:00Z',
-    creativeUrl: '/ad_resort.jpg'
+    creativeUrl: '/ad_resort.jpg',
+    clicks: 1420,
+    impressions: 31800,
+    ctr: '4.47%'
   },
 
   // ── Pending Submissions (Ready for Super Admin Review & Approval) ──
@@ -159,7 +229,10 @@ export const INITIAL_STATIC_ADS = [
     notes: 'We want to target families searching in Ernakulam, Alappuzha, and Kottayam.',
     creativeUrl: '/ad_resort.jpg',
     submittedBy: 'BM-EKM-001',
-    franchiseName: 'Ernakulam Central Franchise'
+    franchiseName: 'Ernakulam Central Franchise',
+    clicks: 0,
+    impressions: 0,
+    ctr: '0.0%'
   },
   {
     id: 'ad-pending-02',
@@ -181,7 +254,10 @@ export const INITIAL_STATIC_ADS = [
     notes: 'Immediate launch requested for next week bookings.',
     creativeUrl: '/ad_mandapam.jpg',
     submittedBy: 'BM-TSR-001',
-    franchiseName: 'Thrissur Franchise'
+    franchiseName: 'Thrissur Franchise',
+    clicks: 0,
+    impressions: 0,
+    ctr: '0.0%'
   },
 
   // ── Sidebar Ad ──
@@ -203,7 +279,10 @@ export const INITIAL_STATIC_ADS = [
     duration: '1 Month',
     amount: 2499,
     requestedAt: '2026-10-13T10:00:00Z',
-    creativeUrl: '/ad_catering.jpg'
+    creativeUrl: '/ad_catering.jpg',
+    clicks: 865,
+    impressions: 24100,
+    ctr: '3.59%'
   }
 ];
 
@@ -220,8 +299,8 @@ export const getStoredAds = () => {
       let hasUpdates = false;
       const hydrated = parsed.map((ad) => {
         const initial = initialMap.get(ad.id);
+        let updated = { ...ad };
         if (initial) {
-          let updated = { ...ad };
           if (initial.creativeUrl && !ad.creativeUrl) {
             hasUpdates = true;
             updated.creativeUrl = initial.creativeUrl;
@@ -231,9 +310,21 @@ export const getStoredAds = () => {
             updated.submittedBy = initial.submittedBy;
             updated.franchiseName = initial.franchiseName;
           }
+          if (ad.clicks === undefined || ad.clicks === null) {
+            hasUpdates = true;
+            updated.clicks = initial.clicks;
+            updated.impressions = initial.impressions;
+            updated.ctr = initial.ctr;
+          }
           return updated;
         }
-        return ad;
+        if (ad.clicks === undefined || ad.clicks === null) {
+          hasUpdates = true;
+          updated.clicks = ad.status === 'APPROVED' ? 420 : 0;
+          updated.impressions = ad.status === 'APPROVED' ? 9800 : 0;
+          updated.ctr = ad.status === 'APPROVED' ? '4.28%' : '0.0%';
+        }
+        return updated;
       });
       if (hasUpdates) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(hydrated));
@@ -259,3 +350,4 @@ export const saveStoredAds = (ads) => {
 
 // Default export of active approved ads for frontend display
 export const STATIC_ADS = INITIAL_STATIC_ADS;
+

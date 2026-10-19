@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getStoredAds, saveStoredAds, AD_TIERS } from '../data/staticAds';
+import { getStoredAds, saveStoredAds, AD_TIERS, getStoredAdTiers } from '../data/staticAds';
 
 const KERALA_DISTRICTS = [
   'Alappuzha', 'Ernakulam', 'Idukki', 'Kannur', 'Kasaragod',
@@ -21,10 +21,11 @@ const VENDOR_CATEGORIES = [
 
 export default function FranchiseAdsManager({ franchiseData }) {
   const [ads, setAds] = useState([]);
-  const [activeFilter, setActiveFilter] = useState('ALL'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [activeFilter, setActiveFilter] = useState('APPROVED'); // Defaults to Active Ads, requests in PENDING tab
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedAd, setSelectedAd] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [confirmDialog, setConfirmDialog] = useState(null);
 
   // New Ad Form State
   const [formTier, setFormTier] = useState('INFEED_CARD');
@@ -64,9 +65,15 @@ export default function FranchiseAdsManager({ franchiseData }) {
     setAds(myAds);
   };
 
+  // Live (Super Admin editable) tier pricing
+  const [liveTiers, setLiveTiers] = useState(() => getStoredAdTiers());
+
   useEffect(() => {
     loadFranchiseAds();
-    const handleStorageChange = () => loadFranchiseAds();
+    const handleStorageChange = () => {
+      loadFranchiseAds();
+      setLiveTiers(getStoredAdTiers());
+    };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [franchiseId]);
@@ -94,7 +101,7 @@ export default function FranchiseAdsManager({ franchiseData }) {
   };
 
   const getCalculatedPrice = () => {
-    const tierConfig = AD_TIERS[formTier];
+    const tierConfig = liveTiers[formTier];
     if (!tierConfig) return 0;
     if (formDuration === 'weekly') return tierConfig.weeklyPrice;
     if (formDuration === 'quarterly') return Math.round(tierConfig.monthlyPrice * 3 * 0.85);
@@ -186,14 +193,107 @@ export default function FranchiseAdsManager({ franchiseData }) {
     }
   };
 
+  const handleUpdateStatus = (adId, newStatus) => {
+    const all = getStoredAds();
+    const updated = all.map((a) => {
+      if (a.id === adId) {
+        return {
+          ...a,
+          status: newStatus,
+          reviewedAt: new Date().toISOString(),
+        };
+      }
+      return a;
+    });
+    saveStoredAds(updated);
+    loadFranchiseAds();
+    if (selectedAd && selectedAd.id === adId) {
+      setSelectedAd((prev) => ({ ...prev, status: newStatus }));
+    }
+    const label =
+      newStatus === 'APPROVED'
+        ? 'resumed & active live on site'
+        : newStatus === 'PAUSED'
+        ? 'paused and taken offline'
+        : newStatus.toLowerCase();
+    showToast(`Advertisement successfully ${label}!`);
+  };
+
+  const requestPause = (ad) => {
+    setConfirmDialog({
+      ad,
+      type: 'PAUSE',
+      title: 'Pause Advertisement Campaign?',
+      subtitle: `Are you sure you want to pause "${ad.businessName}"?`,
+      description:
+        'This campaign will be temporarily paused and taken offline from public search and banners. You can resume it at any time with one click.',
+      confirmText: 'Yes, Pause Campaign',
+      confirmColor: 'bg-amber-600 hover:bg-amber-700 text-white',
+      icon: 'pause_circle',
+      iconBg: 'bg-amber-100 text-amber-700',
+      onConfirm: () => {
+        handleUpdateStatus(ad.id, 'PAUSED');
+        setConfirmDialog(null);
+      },
+    });
+  };
+
+  const requestResume = (ad) => {
+    setConfirmDialog({
+      ad,
+      type: 'RESUME',
+      title: 'Resume Advertisement Campaign?',
+      subtitle: `Publish "${ad.businessName}" back to the live site?`,
+      description: `This advertisement will immediately go back live in its designated ${liveTiers[ad.tier]?.name || ad.tier} placement slot.`,
+      confirmText: 'Yes, Resume Live',
+      confirmColor: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+      icon: 'play_arrow',
+      iconBg: 'bg-emerald-100 text-emerald-700',
+      onConfirm: () => {
+        handleUpdateStatus(ad.id, 'APPROVED');
+        setConfirmDialog(null);
+      },
+    });
+  };
+
+  const requestApprove = (ad) => {
+    setConfirmDialog({
+      ad,
+      type: 'APPROVE',
+      title: 'Approve & Publish Advertisement?',
+      subtitle: `Approve "${ad.businessName}" and publish it live?`,
+      description: `This advertisement will be activated and immediately placed live on Bharath Marriage in its designated ${liveTiers[ad.tier]?.name || ad.tier} slot.`,
+      confirmText: 'Yes, Approve & Publish',
+      confirmColor: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+      icon: 'check_circle',
+      iconBg: 'bg-emerald-100 text-emerald-700',
+      onConfirm: () => {
+        handleUpdateStatus(ad.id, 'APPROVED');
+        setConfirmDialog(null);
+      },
+    });
+  };
+
+  const pendingCount = ads.filter((a) => a.status === 'PENDING').length;
+  const approvedCount = ads.filter((a) => a.status === 'APPROVED').length;
+  const pausedCount = ads.filter((a) => a.status === 'PAUSED').length;
+  const rejectedCount = ads.filter((a) => a.status === 'REJECTED').length;
+
   const filteredAds = ads.filter((a) => {
     if (activeFilter === 'ALL') return true;
     return a.status === activeFilter;
   });
 
-  const pendingCount = ads.filter((a) => a.status === 'PENDING').length;
-  const approvedCount = ads.filter((a) => a.status === 'APPROVED').length;
   const totalVolume = ads.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+  const totalClicks = ads
+    .filter((a) => a.status === 'APPROVED')
+    .reduce((sum, a) => sum + (Number(a.clicks) || 0), 0);
+  const totalImpressions = ads
+    .filter((a) => a.status === 'APPROVED')
+    .reduce((sum, a) => sum + (Number(a.impressions) || 0), 0);
+  const overallCtr = totalImpressions > 0 
+    ? ((totalClicks / totalImpressions) * 100).toFixed(1) + '%' 
+    : '4.4%';
 
   return (
     <div className="space-y-6 text-left w-full">
@@ -240,7 +340,7 @@ export default function FranchiseAdsManager({ franchiseData }) {
       )}
 
       {/* ── Metric Cards ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4">
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-[10px] font-bold uppercase tracking-wider">Total Submissions</span>
@@ -268,7 +368,16 @@ export default function FranchiseAdsManager({ franchiseData }) {
           <p className="text-[10px] text-emerald-600/80 mt-0.5">Currently live on site</p>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-rose-200/80 bg-rose-50/20 shadow-xs">
+        <div className="bg-white p-4 rounded-2xl border border-sky-200/80 bg-sky-50/20 shadow-xs">
+          <div className="flex items-center justify-between text-sky-700">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Total Ad Clicks</span>
+            <span className="material-symbols-outlined text-lg">ads_click</span>
+          </div>
+          <p className="text-2xl font-black text-sky-900 mt-2">{totalClicks.toLocaleString()}</p>
+          <p className="text-[10px] text-sky-600/80 mt-0.5">Across published campaigns</p>
+        </div>
+
+        <div className="bg-white p-4 rounded-2xl border border-rose-200/80 bg-rose-50/20 shadow-xs col-span-2 md:col-span-1">
           <div className="flex items-center justify-between text-deep-maroon">
             <span className="text-[10px] font-bold uppercase tracking-wider">Estimated Ad Volume</span>
             <span className="material-symbols-outlined text-lg">payments</span>
@@ -281,56 +390,100 @@ export default function FranchiseAdsManager({ franchiseData }) {
       {/* ── Filter Tabs ── */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         {[
-          { key: 'ALL', label: `All Ads (${ads.length})` },
-          { key: 'PENDING', label: `Pending Review (${pendingCount})` },
-          { key: 'APPROVED', label: `Active & Approved (${approvedCount})` },
-          { key: 'REJECTED', label: 'Rejected' }
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveFilter(tab.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-              activeFilter === tab.key
-                ? 'bg-deep-maroon text-white shadow-xs'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+          { key: 'APPROVED', label: 'Active Ads', count: approvedCount, icon: 'verified' },
+          {
+            key: 'PENDING',
+            label: 'Pending Review',
+            count: pendingCount,
+            icon: 'pending_actions',
+            isPending: true,
+          },
+          {
+            key: 'PAUSED',
+            label: 'Paused Ads',
+            count: pausedCount,
+            icon: 'pause_circle',
+          },
+          {
+            key: 'REJECTED',
+            label: 'Rejected',
+            count: rejectedCount,
+            icon: 'cancel',
+          },
+          { key: 'ALL', label: 'All Ads Log', count: ads.length, icon: 'history' },
+        ].map((tab) => {
+          const isActive = activeFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveFilter(tab.key)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                isActive
+                  ? 'bg-deep-maroon text-white shadow-xs'
+                  : tab.isPending && pendingCount > 0
+                  ? 'bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100'
+                  : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px]">{tab.icon}</span>
+              <span>{tab.label}</span>
+              <span
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : tab.isPending && pendingCount > 0
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Ads Table ── */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-600">
-            <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+          <table className="w-full text-left text-xs text-slate-600 border-collapse">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               <tr>
                 <th className="py-3 px-4">Advertiser &amp; Creative</th>
-                <th className="py-3 px-4">Placement / Tier</th>
-                <th className="py-3 px-4">Target Region</th>
-                <th className="py-3 px-4">Duration &amp; Fee</th>
-                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-3">Placement</th>
+                <th className="py-3 px-3">Clicks</th>
+                <th className="py-3 px-3">Target Region</th>
+                <th className="py-3 px-3">Fee &amp; Duration</th>
+                <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredAds.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                  <td colSpan="7" className="py-12 text-center text-slate-400">
                     <div className="max-w-sm mx-auto space-y-2">
-                      <span className="material-symbols-outlined text-4xl text-slate-300">campaign</span>
-                      <p className="font-semibold text-slate-600">No advertisements submitted yet.</p>
+                      <span className="material-symbols-outlined text-4xl text-slate-300">
+                        {activeFilter === 'PENDING' ? 'task_alt' : 'campaign'}
+                      </span>
+                      <p className="font-semibold text-slate-600">
+                        {activeFilter === 'PENDING'
+                          ? 'No pending ad requests'
+                          : `No ads found under ${activeFilter.toLowerCase()}`}
+                      </p>
                       <p className="text-[11px] text-slate-400">
-                        Help local wedding vendors advertise their halls, jewellery, and photography to Bharath Marriage visitors.
+                        {activeFilter === 'PENDING'
+                          ? 'All ad submissions for your territory have been processed.'
+                          : 'Submit a new banner or check other status filters.'}
                       </p>
                       <button
                         type="button"
                         onClick={() => setShowSubmitModal(true)}
-                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-deep-maroon text-white rounded-lg text-xs font-bold hover:bg-primary transition-all cursor-pointer"
+                        className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-deep-maroon text-white rounded-xl text-xs font-bold hover:bg-primary transition-all cursor-pointer shadow-xs"
                       >
                         <span className="material-symbols-outlined text-sm">add</span>
-                        Submit First Advertisement
+                        Submit New Ad
                       </button>
                     </div>
                   </td>
@@ -339,96 +492,152 @@ export default function FranchiseAdsManager({ franchiseData }) {
                 filteredAds.map((ad) => (
                   <tr key={ad.id} className="hover:bg-slate-50/80 transition-colors">
                     {/* Business & Thumbnail */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
                         {ad.creativeUrl ? (
                           <div
                             onClick={() => setSelectedAd(ad)}
-                            className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-deep-maroon/30 transition-all"
+                            className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 cursor-pointer hover:ring-2 hover:ring-deep-maroon/30 transition-all shadow-2xs"
                             title="Click to view ad creative"
                           >
                             <img src={ad.creativeUrl} alt={ad.businessName} className="w-full h-full object-cover" />
                           </div>
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
-                            <span className="material-symbols-outlined text-lg">image</span>
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                            <span className="material-symbols-outlined text-base">image</span>
                           </div>
                         )}
-                        <div>
-                          <div className="font-bold text-slate-800 text-sm">
+                        <div className="min-w-0 max-w-[200px]">
+                          <div
+                            onClick={() => setSelectedAd(ad)}
+                            className="font-bold text-slate-900 text-xs sm:text-sm truncate hover:text-deep-maroon cursor-pointer transition-colors"
+                          >
                             {ad.businessName}
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1 max-w-[220px]">
-                            {ad.tagline || ad.title}
+                          <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                            {ad.category || 'Wedding Vendor'}
                           </div>
-                          {ad.category && (
-                            <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
-                              {ad.category}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </td>
 
                     {/* Tier / Slot */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-800">
-                        {AD_TIERS[ad.tier]?.name || ad.tier}
+                    <td className="py-3 px-3">
+                      <div className="font-semibold text-slate-800 text-xs">
+                        {liveTiers[ad.tier]?.name || ad.tier}
                       </div>
-                      <div className="text-[10px] text-slate-400">
-                        Slot: <strong className="text-slate-600">{ad.slot}</strong>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {ad.slot === 'SEARCH_INFEED'
+                          ? 'In-Feed Card'
+                          : ad.slot === 'SEARCH_TOP'
+                          ? 'Top Leaderboard'
+                          : 'Sidebar'}
                       </div>
-                      <div className="text-[10px] text-slate-500">
-                        {AD_TIERS[ad.tier]?.dimensions}
+                    </td>
+
+                    {/* Clicks (Only click count, no views, no CTR) */}
+                    <td className="py-3 px-3">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-100 text-sky-900 font-bold text-xs">
+                        <span className="material-symbols-outlined text-[14px] text-sky-600">
+                          ads_click
+                        </span>
+                        <span>{(ad.clicks || 0).toLocaleString()}</span>
                       </div>
                     </td>
 
                     {/* Region */}
-                    <td className="py-3.5 px-4">
-                      <span className="font-semibold text-deep-maroon">
+                    <td className="py-3 px-3">
+                      <span className="font-semibold text-deep-maroon text-xs truncate block max-w-[120px]">
                         {ad.targetingMode === 'ALL_KERALA'
-                          ? 'All Kerala (Statewide)'
+                          ? 'All Kerala'
                           : ad.targetDistricts
-                          ? ad.targetDistricts.join(', ')
+                          ? ad.targetDistricts[0]
                           : franchiseData?.location || 'Territory'}
                       </span>
                     </td>
 
                     {/* Duration & Fee */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-deep-maroon text-sm">
+                    <td className="py-3 px-3">
+                      <div className="font-bold text-deep-maroon text-xs">
                         ₹{(ad.amount || 0).toLocaleString()}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-slate-400 mt-0.5">
                         {ad.duration || '1 Month'}
                       </div>
                     </td>
 
                     {/* Status Badge */}
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-3">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           ad.status === 'APPROVED'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : ad.status === 'PENDING'
                             ? 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                            : ad.status === 'PAUSED'
+                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
                             : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                        {ad.status === 'APPROVED' ? 'Active & Approved' : ad.status === 'PENDING' ? 'Under Review' : 'Rejected'}
+                        {ad.status === 'APPROVED'
+                          ? 'Active'
+                          : ad.status === 'PENDING'
+                          ? 'Under Review'
+                          : ad.status === 'PAUSED'
+                          ? 'Paused'
+                          : 'Rejected'}
                       </span>
                     </td>
 
                     {/* Action */}
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAd(ad)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors cursor-pointer"
-                      >
-                        View
-                      </button>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAd(ad)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[11px] transition-colors cursor-pointer"
+                        >
+                          View
+                        </button>
+                        {ad.status === 'APPROVED' ? (
+                          <button
+                            type="button"
+                            onClick={() => requestPause(ad)}
+                            title="Pause Campaign"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold rounded-lg text-[11px] transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              pause_circle
+                            </span>
+                            <span>Pause</span>
+                          </button>
+                        ) : ad.status === 'PAUSED' ? (
+                          <button
+                            type="button"
+                            onClick={() => requestResume(ad)}
+                            title="Resume Campaign"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] transition-all cursor-pointer shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              play_arrow
+                            </span>
+                            <span>Resume</span>
+                          </button>
+                        ) : ad.status === 'REJECTED' ? (
+                          <button
+                            type="button"
+                            onClick={() => requestApprove(ad)}
+                            title="Approve & Publish Ad"
+                            className="flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] transition-all cursor-pointer shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              check_circle
+                            </span>
+                            <span>Approve</span>
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -468,7 +677,7 @@ export default function FranchiseAdsManager({ franchiseData }) {
                   1. Select Ad Placement &amp; Format *
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {Object.values(AD_TIERS).map((tier) => {
+                  {Object.values(liveTiers).map((tier) => {
                     const isSelected = formTier === tier.id;
                     return (
                       <div
@@ -591,7 +800,7 @@ export default function FranchiseAdsManager({ franchiseData }) {
                     Upload Banner Artwork Image (JPG, PNG)
                   </span>
                   <span className="text-[10px] font-bold text-slate-500">
-                    Recommended: {AD_TIERS[formTier]?.dimensions}
+                    Recommended: {liveTiers[formTier]?.dimensions}
                   </span>
                 </div>
 
@@ -816,7 +1025,7 @@ export default function FranchiseAdsManager({ franchiseData }) {
                     Uploaded Artwork Banner
                   </span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded">
-                    {AD_TIERS[selectedAd.tier]?.dimensions || selectedAd.tier}
+                    {liveTiers[selectedAd.tier]?.dimensions || selectedAd.tier}
                   </span>
                 </div>
 
@@ -841,6 +1050,37 @@ export default function FranchiseAdsManager({ franchiseData }) {
                 <p className="text-slate-600 mt-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed">
                   {selectedAd.tagline}
                 </p>
+              </div>
+
+              {/* Ad Performance Analytics Card */}
+              <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base text-sky-600">
+                      ads_click
+                    </span>
+                    Ad Engagement
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    selectedAd.status === 'APPROVED'
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${selectedAd.status === 'APPROVED' ? 'bg-emerald-500' : 'bg-slate-400'}`}></span>
+                    {selectedAd.status === 'APPROVED' ? 'Active Tracking' : 'Awaiting Publication'}
+                  </span>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-sky-100 shadow-2xs flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-slate-600 block">Total User Clicks</span>
+                    <span className="text-[10px] text-slate-400">Total clicks on this campaign creative</span>
+                  </div>
+                  <span className="text-xl font-black text-sky-900 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-base text-sky-600">ads_click</span>
+                    {(selectedAd.clicks || 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
 
               {selectedAd.targetUrl && (
@@ -896,13 +1136,119 @@ export default function FranchiseAdsManager({ franchiseData }) {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex justify-end">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedAd(null)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition-colors cursor-pointer"
               >
                 Close
+              </button>
+
+              <div className="flex items-center gap-2">
+                {selectedAd.status === 'APPROVED' ? (
+                  <button
+                    type="button"
+                    onClick={() => requestPause(selectedAd)}
+                    className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-sm">pause_circle</span>
+                    Pause Campaign
+                  </button>
+                ) : selectedAd.status === 'PAUSED' ? (
+                  <button
+                    type="button"
+                    onClick={() => requestResume(selectedAd)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-sm">play_arrow</span>
+                    Resume &amp; Publish Ad
+                  </button>
+                ) : selectedAd.status === 'REJECTED' ? (
+                  <button
+                    type="button"
+                    onClick={() => requestApprove(selectedAd)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                    Approve &amp; Publish Ad
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmation Modal (for Pause, Resume) ── */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-scale-in text-left">
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${confirmDialog.iconBg}`}
+              >
+                <span className="material-symbols-outlined text-2xl">
+                  {confirmDialog.icon}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-bold text-slate-900 leading-snug">
+                  {confirmDialog.title}
+                </h3>
+                <p className="text-xs font-semibold text-slate-600 mt-0.5">
+                  {confirmDialog.subtitle}
+                </p>
+              </div>
+            </div>
+
+            {/* Ad summary pill */}
+            {confirmDialog.ad && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+                {confirmDialog.ad.creativeUrl ? (
+                  <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-200 bg-slate-900">
+                    <img
+                      src={confirmDialog.ad.creativeUrl}
+                      alt={confirmDialog.ad.businessName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center shrink-0 text-slate-500">
+                    <span className="material-symbols-outlined text-base">campaign</span>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-800 truncate">
+                    {confirmDialog.ad.businessName}
+                  </p>
+                  <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                    {liveTiers[confirmDialog.ad.tier]?.name || confirmDialog.ad.tier} •{' '}
+                    {confirmDialog.ad.duration || '1 Month'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {confirmDialog.description}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className={`px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-1.5 ${confirmDialog.confirmColor}`}
+              >
+                <span className="material-symbols-outlined text-sm">{confirmDialog.icon}</span>
+                <span>{confirmDialog.confirmText}</span>
               </button>
             </div>
           </div>

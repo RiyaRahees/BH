@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { STATIC_ADS, AD_TIERS, getStoredAds } from '../src/data/staticAds';
+import { STATIC_ADS, AD_TIERS, getStoredAds, getStoredAdTiers } from '../src/data/staticAds';
 
 /**
  * AdBanner Component
@@ -39,7 +39,7 @@ export default function AdBanner({ slot, tier = 'LEADERBOARD', adIndex = 0, show
                 Promote Your Brand Here – Reach 10,000+ Kerala Families
               </p>
               <p className="text-[11px] text-slate-500">
-                Placement: {AD_TIERS.LEADERBOARD.dimensions}
+                Placement: {getStoredAdTiers().LEADERBOARD.dimensions}
               </p>
             </div>
           </div>
@@ -120,126 +120,129 @@ export default function AdBanner({ slot, tier = 'LEADERBOARD', adIndex = 0, show
   // ─────────────────────────────────────────────────────────────
   if (tier === 'INFEED_CARD') {
     if (!ad) {
+      if (!showFallback) return null;
       return (
-        <div className="h-full min-h-[380px] flex flex-col justify-between p-5 rounded-2xl border-2 border-dashed border-deep-maroon/20 bg-white text-center shadow-xs">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-deep-maroon bg-deep-maroon/8 px-2 py-0.5 rounded self-center">
-            Sponsored Slot
+        <Link
+          to="/advertise"
+          className="group shrink-0 flex flex-col justify-between overflow-hidden rounded-xl border-2 border-dashed border-deep-maroon/25 bg-white p-3 text-center shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-deep-maroon/50 hover:shadow-md w-full"
+        >
+          <div className="flex items-center justify-between w-full">
+            <span className="text-[8px] sm:text-[10px] font-bold text-deep-maroon bg-deep-maroon/5 border border-deep-maroon/10 px-1 sm:px-2 py-0.5 rounded-md uppercase">
+              Sponsored Slot
+            </span>
+            <span className="text-[8px] sm:text-[9px] font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded-full">Available</span>
           </div>
-          <div className="my-auto py-4">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-deep-maroon/8 text-deep-maroon flex items-center justify-center text-2xl mb-3">
-              <span className="material-symbols-outlined text-[28px]">storefront</span>
+
+          <div className="my-auto py-3">
+            <div className="w-10 h-10 mx-auto rounded-xl bg-deep-maroon/8 text-deep-maroon flex items-center justify-center text-lg mb-2 group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined text-[22px]">storefront</span>
             </div>
-            <h4 className="text-base font-bold text-charcoal-text mb-1">
+            <h4 className="text-xs sm:text-sm font-bold text-slate-800 mb-0.5">
               Promote Your Brand
             </h4>
-            <p className="text-xs text-soft-gray leading-relaxed mb-3">
-              Reach thousands of prospective brides, grooms & families actively exploring matches.
+            <p className="text-[10px] text-slate-500">
+              In-Feed Vendor Placement
             </p>
-            <span className="text-[11px] font-semibold text-deep-maroon bg-deep-maroon/5 px-2.5 py-1 rounded-md">
-              In-Feed Match Card
+          </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <span className="w-full inline-block py-1.5 px-2 bg-deep-maroon group-hover:bg-primary text-white font-bold text-[10px] sm:text-xs rounded-lg transition-all shadow-xs">
+              Book Ad Slot →
             </span>
           </div>
-          <div className="pt-3 border-t border-slate-100">
-            <Link
-              to="/advertise"
-              className="w-full inline-block py-2.5 px-3 bg-deep-maroon hover:bg-primary text-white font-bold text-xs rounded-xl transition-all shadow-xs"
-            >
-              Book Ad Slot (₹3,499/mo)
-            </Link>
-          </div>
-        </div>
+        </Link>
       );
     }
 
     return (
-      <div className="h-full flex flex-col justify-between rounded-2xl border border-slate-200/90 bg-white shadow-xs hover:shadow-md hover:border-deep-maroon/40 transition-all overflow-hidden text-left group">
-        
+      <a
+        href={ad.targetUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group shrink-0 block overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg w-full text-left"
+      >
         {/* Ad Image / Creative Top Section */}
         {ad.creativeUrl ? (
           <div className="relative w-full aspect-[3/4] overflow-hidden bg-slate-100">
             <img
               src={ad.creativeUrl}
-              alt={ad.title}
+              alt={ad.title || ad.businessName}
               className="h-full w-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
             />
             {/* Top Sponsored Tag */}
-            <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
-              <span className="bg-black/70 backdrop-blur-xs text-white text-[8px] font-extrabold uppercase px-2 py-0.5 rounded tracking-widest border border-white/20">
-                Sponsored Ad
-              </span>
-            </div>
-            {/* Bottom Overlay with Category */}
-            <div className="pointer-events-none absolute bottom-0 inset-x-0 pb-1.5 pt-6 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex items-center justify-between px-3 z-10">
-              <span className="text-heritage-gold font-bold uppercase text-[9px] tracking-wider">
-                {ad.category || 'Featured Vendor'}
-              </span>
-              <span className="text-white text-[10px] font-bold">
-                {ad.rating || 'Verified'}
+            <span className="absolute top-1.5 sm:top-2.5 left-1.5 sm:left-2.5 rounded-md bg-black/70 backdrop-blur-xs px-2 py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest text-white border border-white/20 shadow-xs z-10">
+              Sponsored Ad
+            </span>
+
+            {/* Bottom Watermark Overlay (Identical to ProfileCard.jsx) */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none select-none absolute bottom-0 inset-x-0 pb-1.5 pt-4 bg-gradient-to-t from-black/65 via-black/30 to-transparent flex items-center justify-center z-10"
+            >
+              <span className="text-white/90 font-bold tracking-widest drop-shadow-md uppercase text-[9px] sm:text-[10px] whitespace-nowrap">
+                Bharath Marriage
               </span>
             </div>
           </div>
         ) : (
-          <div className="p-3 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
-            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-500">
-              Sponsored
-            </span>
-            <span className="text-[9px] font-bold uppercase text-deep-maroon tracking-wider">
-              {ad.badge}
-            </span>
+          <div className="relative w-full aspect-[3/4] overflow-hidden bg-slate-100 flex flex-col items-center justify-center p-3 text-center">
+            <span className="material-symbols-outlined text-[36px] text-deep-maroon/40 mb-1">campaign</span>
+            <span className="text-xs font-bold text-slate-700">{ad.businessName}</span>
           </div>
         )}
 
-        {/* Card Body */}
-        <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between">
-          <div>
-            <h4 className="text-sm sm:text-base font-bold text-slate-900 group-hover:text-deep-maroon transition-colors line-clamp-1 mb-0.5">
-              {ad.businessName}
-            </h4>
-            <h5 className="text-[11px] font-semibold text-slate-700 line-clamp-1 mb-1">
-              {ad.title}
-            </h5>
-            <p className="text-[11px] text-soft-gray leading-relaxed line-clamp-2 mb-2">
-              {ad.tagline}
-            </p>
+        {/* Card Details (Strictly mirrors ProfileCard.jsx padding & height) */}
+        <div className="p-3 flex flex-col gap-1.5">
+          {/* Line 1: Sponsored Badge & Verified Status */}
+          <div className="flex items-center justify-between gap-1 w-full overflow-hidden">
+            <span className="text-[8px] sm:text-[10px] font-bold text-deep-maroon bg-deep-maroon/5 border border-deep-maroon/10 px-1 sm:px-2 py-0.5 rounded-md tracking-wider truncate min-w-0">
+              SPONSORED AD
+            </span>
+            <span className="flex items-center gap-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 text-emerald-700 bg-emerald-50 border border-emerald-100">
+              <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full shrink-0 bg-emerald-500"></span>
+              Verified
+            </span>
           </div>
 
-          <div className="space-y-1.5 pt-2 border-t border-slate-100 text-[10px] sm:text-[11px] text-slate-600">
-            {ad.location && (
-              <div className="flex items-center gap-1.5 truncate">
-                <span>📍</span>
-                <span className="truncate">{ad.location}</span>
-              </div>
+          {/* Line 2: Business Name & Title */}
+          <h3 className="font-bold text-slate-800 truncate text-left flex items-center justify-between gap-1 text-xs sm:text-sm">
+            <span className="truncate group-hover:text-deep-maroon transition-colors">{ad.businessName}</span>
+            {ad.title && (
+              <span className="text-[10px] sm:text-xs font-medium text-slate-500 shrink-0 ml-1 truncate max-w-[85px] sm:max-w-[105px]">
+                {ad.title.split('&')[0].trim()}
+              </span>
             )}
-            {ad.phone && (
-              <div className="flex items-center gap-1.5">
-                <span>📞</span>
-                <a href={`tel:${ad.phone}`} className="hover:text-deep-maroon font-semibold">
-                  {ad.phone}
-                </a>
-              </div>
+          </h3>
+
+          {/* Line 3: Info Line (Place • Partner • Action) with border-t */}
+          <div className="flex items-center gap-1 pt-1.5 border-t border-slate-100 text-[9px] sm:text-[10px] text-slate-600 font-medium overflow-hidden text-left w-full">
+            {ad.location && (
+              <span className="text-deep-maroon font-semibold truncate max-w-[80px] sm:max-w-[100px] shrink">
+                {ad.location.split('&')[0].trim().replace(/^MG Road,\s*/i, '')}
+              </span>
             )}
 
-            <div className="pt-1.5 flex items-center gap-2">
-              <a
-                href={ad.targetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 py-2 text-center bg-deep-maroon hover:bg-primary text-white font-bold text-xs rounded-xl transition-all shadow-xs"
+            {ad.location && <span className="text-slate-300 font-bold shrink-0">•</span>}
+
+            <span className="truncate max-w-[75px] sm:max-w-[95px] shrink text-slate-600">
+              Featured Partner
+            </span>
+
+            <span className="text-slate-300 font-bold shrink-0">•</span>
+
+            <span className="shrink-0 font-medium flex items-center gap-0.5 ml-auto text-emerald-600">
+              <span 
+                className="material-symbols-outlined leading-none shrink-0" 
+                style={{ fontSize: '11px' }}
               >
-                {ad.ctaText || 'Contact Vendor'} ↗
-              </a>
-              <Link
-                to="/advertise"
-                className="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
-                title="Want to advertise here?"
-              >
-                Info
-              </Link>
-            </div>
+                storefront
+              </span>
+              <span className="whitespace-nowrap">{ad.ctaText || 'View Catalogue'}</span>
+            </span>
           </div>
         </div>
-      </div>
+      </a>
     );
   }
 
