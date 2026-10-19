@@ -663,9 +663,7 @@ export default function Search() {
                     if ((index + 1) % 6 === 0) {
                       const adIndex = Math.floor(index / 6) - 1;
                       elements.push(
-                        <div key={`ad-feed-${index}`} className="col-span-1">
-                          <AdBanner slot="SEARCH_INFEED" tier="INFEED_CARD" adIndex={adIndex} />
-                        </div>
+                        <AdBanner key={`ad-feed-${index}`} slot="SEARCH_INFEED" tier="INFEED_CARD" adIndex={adIndex} />
                       );
                     }
                     return elements;

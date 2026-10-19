@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { AD_TIERS, getStoredAds, saveStoredAds } from '../data/staticAds';
+import { AD_TIERS, getStoredAds, saveStoredAds, getStoredAdTiers } from '../data/staticAds';
 import { useSettings } from '../context/SettingsContext';
+import AdPlacementPreviewModal from '../components/AdPlacementPreviewModal';
 
 const KERALA_DISTRICTS = [
   "Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha",
@@ -16,6 +17,7 @@ export default function AdvertiseWithUs() {
   const contactPhone = settings?.contactPhone || '+91 98450 12345';
 
   const [selectedTier, setSelectedTier] = useState('INFEED_CARD');
+  const [previewTier, setPreviewTier] = useState(null);
   const [duration, setDuration] = useState('monthly'); // 'weekly' | 'monthly' | 'quarterly'
   const [targetingMode, setTargetingMode] = useState('ALL_KERALA'); // 'ALL_KERALA' | 'SPECIFIC_DISTRICTS'
   const [selectedDistricts, setSelectedDistricts] = useState([]);
@@ -33,7 +35,9 @@ export default function AdvertiseWithUs() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const activeTierConfig = AD_TIERS[selectedTier];
+  // Use live tier pricing (editable by Super Admin)
+  const AD_TIERS_LIVE = getStoredAdTiers();
+  const activeTierConfig = AD_TIERS_LIVE[selectedTier];
 
   const getCalculatedPrice = () => {
     if (!activeTierConfig) return 0;
@@ -184,7 +188,7 @@ export default function AdvertiseWithUs() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {Object.values(AD_TIERS).map((tier) => {
+            {Object.values(AD_TIERS_LIVE).map((tier) => {
               const isSelected = selectedTier === tier.id;
               return (
                 <div
@@ -203,9 +207,24 @@ export default function AdvertiseWithUs() {
                   )}
 
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-deep-maroon bg-deep-maroon/8 px-2.5 py-1 rounded-md inline-block mb-3">
-                      {tier.badge}
-                    </span>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-deep-maroon bg-deep-maroon/8 px-2.5 py-1 rounded-md inline-block">
+                        {tier.badge}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewTier(tier.id);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-deep-maroon hover:text-white text-slate-700 text-[11px] font-bold transition-all cursor-pointer border border-slate-200 shadow-2xs"
+                        title="Preview how this ad looks on site"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">visibility</span>
+                        Preview
+                      </button>
+                    </div>
+
                     <h3 className="text-lg font-bold text-charcoal-text mb-1">
                       {tier.name}
                     </h3>
@@ -234,16 +253,31 @@ export default function AdvertiseWithUs() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    className={`mt-6 w-full py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-deep-maroon text-white shadow-xs'
-                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-                    }`}
-                  >
-                    {isSelected ? '✓ Selected for Booking' : 'Select Format'}
-                  </button>
+                  <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewTier(tier.id);
+                      }}
+                      className="px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-deep-maroon transition-all flex items-center justify-center gap-1 cursor-pointer border border-slate-200"
+                      title="See live placement preview"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">visibility</span>
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTier(tier.id)}
+                      className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-deep-maroon text-white shadow-xs'
+                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      {isSelected ? '✓ Selected for Booking' : 'Select Format'}
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -687,6 +721,17 @@ export default function AdvertiseWithUs() {
           </div>
         </div>
       </section>
+
+      {/* ── 5. AD PLACEMENT LIVE-SITE PREVIEW MODAL ── */}
+      <AdPlacementPreviewModal
+        isOpen={Boolean(previewTier)}
+        tierKey={previewTier}
+        onClose={() => setPreviewTier(null)}
+        onSelectTier={(tierId) => {
+          setSelectedTier(tierId);
+          setPreviewTier(null);
+        }}
+      />
     </div>
   );
 }
